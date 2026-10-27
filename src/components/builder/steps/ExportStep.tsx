@@ -10,8 +10,9 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { LoginModal } from '@/components/auth/LoginModal'
 import { QRCodeSVG } from 'qrcode.react'
-import { FileText, FileImage, FileType2, FileType, Globe, Copy, Download, Loader2, ExternalLink, RefreshCw, Check, Eye, QrCode, UserRound } from 'lucide-react'
+import { FileText, FileImage, FileType2, FileType, Globe, Copy, Download, Loader2, ExternalLink, RefreshCw, Check, Eye, QrCode } from 'lucide-react'
 import { toast } from 'sonner'
+import { PortfolioStep } from './PortfolioStep'
 
 interface CheckResp {
   available: boolean
@@ -164,6 +165,9 @@ export function ExportStep() {
         </div>
       </div>
 
+      {/* Portfolio website — creation lives here, below the exports */}
+      <PortfolioStep />
+
       {/* Publish / share */}
       <div className="rounded-xl border border-slate-200 p-4 space-y-4">
         <div className="flex items-start gap-3">
@@ -171,7 +175,7 @@ export function ExportStep() {
           <div className="flex-1">
             <h3 className="text-sm font-semibold text-slate-800">Publish &amp; get your personal link</h3>
             <p className="text-[11px] text-slate-500">
-              Your {portfolio.enabled ? 'portfolio website' : 'CV'} goes live at <b>seemehere…/cv/yourname</b> — perfect for your email signature. Unlisted, free, no ads on your page.
+              Your {portfolio.enabled ? 'portfolio website' : 'CV'} goes live <b>instantly</b> at <b>seemehere…/cv/yourname</b> — free, no account needed, no ads on your page.
             </p>
           </div>
         </div>
@@ -213,17 +217,18 @@ export function ExportStep() {
               {publishing ? 'Publishing…' : 'Publish & copy my link'}
             </Button>
 
-            {!user && (
-              <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                <UserRound className="h-4 w-4 text-amber-700 mt-0.5 shrink-0" />
-                <div className="text-[11px] leading-relaxed text-amber-800">
-                  Publishing without an account gives you a <b>permanent link that can&apos;t be edited later</b>.
-                  Want to update yours anytime?{' '}
-                  <button className="font-bold underline" onClick={() => setLoginOpen(true)}>Create a free account</button> (username + password, no email) —
-                  or publish now and keep building.
-                </div>
-              </div>
-            )}
+            <p className="text-[11px] text-slate-500 text-center leading-relaxed">
+              {user ? (
+                <>Signed in — your page is saved to your account and you can edit &amp; republish it anytime.</>
+              ) : (
+                <>
+                  No account needed — your link works immediately. Want to edit this page later?{' '}
+                  <button className="font-semibold text-violet-600 underline" onClick={() => setLoginOpen(true)}>
+                    Create a free account
+                  </button>{' '}(optional — username + password, no email).
+                </>
+              )}
+            </p>
           </>
         ) : (
           <div className="space-y-3">
@@ -251,8 +256,8 @@ export function ExportStep() {
                   <Check className="h-3.5 w-3.5" /> Saved to your account — edit &amp; republish anytime
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-1 text-amber-700">
-                  Anonymous page — create an account to edit it later
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 border border-slate-200 px-2.5 py-1 text-slate-600">
+                  Optional: create an account later to edit this page
                 </span>
               )}
             </div>
@@ -290,9 +295,9 @@ export function ExportStep() {
                 </div>
               </div>
               {!user && (
-                <p className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-[11px] text-amber-800">
-                  Tip: this page is permanent and can&apos;t be edited later without an account.{' '}
-                  <button className="font-bold underline" onClick={() => setLoginOpen(true)}>Create a free account</button> to keep control.
+                <p className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 text-[11px] text-slate-600">
+                  Tip: sign up later and you can edit this page anytime —{' '}
+                  <button className="font-bold underline" onClick={() => setLoginOpen(true)}>create a free account</button> (optional).
                 </p>
               )}
             </div>

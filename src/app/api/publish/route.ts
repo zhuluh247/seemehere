@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { randomBytes, scryptSync, timingSafeEqual } from 'crypto'
 import { db } from '@/lib/db'
+import { ensureSchema } from '@/lib/ensure-schema'
 import { validateUsername } from '@/lib/cv/username'
 import { sessionUser } from '@/lib/auth'
 import { rateLimited, clientIp } from '@/lib/rate-limit'
@@ -42,6 +43,7 @@ function verifyLegacyClaimKey(key: string, stored: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
+  await ensureSchema()
   const ip = clientIp(req)
   if (rateLimited(`publish:${ip}`, 8, 60 * 60 * 1000)) {
     return NextResponse.json({ error: 'Too many publishes — try again in a bit' }, { status: 429 })

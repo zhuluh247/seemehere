@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { ensureSchema } from '@/lib/ensure-schema'
 import { validateUsername, suggestUsernames } from '@/lib/cv/username'
 import { sessionUser } from '@/lib/auth'
 
@@ -13,6 +14,7 @@ const cvTaken = async (u: string) => (await db.publishedCv.findUnique({ where: {
 const userTaken = async (u: string) => (await db.user.findUnique({ where: { username: u } })) !== null
 
 export async function GET(req: NextRequest) {
+  await ensureSchema()
   const raw = req.nextUrl.searchParams.get('u') ?? ''
   const check = validateUsername(raw)
   if (!check.ok) {

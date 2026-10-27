@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { ensureSchema } from '@/lib/ensure-schema'
 import { normalizeUsername } from '@/lib/cv/username'
 import { createSessionToken, verifyPassword, sessionCookieOptions, SESSION_COOKIE } from '@/lib/auth'
 import { rateLimited, clientIp } from '@/lib/rate-limit'
@@ -7,6 +8,7 @@ import { rateLimited, clientIp } from '@/lib/rate-limit'
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
+  await ensureSchema()
   const ip = clientIp(req)
   if (rateLimited(`login:${ip}`, 15, 15 * 60 * 1000)) {
     return NextResponse.json({ error: 'Too many attempts — wait a few minutes' }, { status: 429 })

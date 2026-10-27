@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { ensureSchema } from '@/lib/ensure-schema'
 import { sessionUser } from '@/lib/auth'
 import { rateLimited, clientIp } from '@/lib/rate-limit'
 
@@ -73,6 +74,7 @@ function shape(row: {
 
 // GET → all drafts (full payloads) for the signed-in user
 export async function GET(req: NextRequest) {
+  await ensureSchema()
   const user = await sessionUser(req)
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
   const rows = await db.draft.findMany({ where: { userId: user.id }, orderBy: { updatedAt: 'desc' } })
@@ -81,6 +83,7 @@ export async function GET(req: NextRequest) {
 
 // POST → create or upsert one draft
 export async function POST(req: NextRequest) {
+  await ensureSchema()
   const ip = clientIp(req)
   if (rateLimited(`drafts:${ip}`, 120, 60 * 60 * 1000)) {
     return NextResponse.json({ error: 'Slow down' }, { status: 429 })

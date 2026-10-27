@@ -15,7 +15,6 @@ import { ExperienceStep, EducationStep } from './steps/ExperienceStep'
 import { SkillsStep } from './steps/SkillsStep'
 import { SummaryStep } from './steps/SummaryStep'
 import { ExtrasStep } from './steps/ExtrasStep'
-import { PortfolioStep } from './steps/PortfolioStep'
 import { ReviewStep } from './steps/ReviewStep'
 import { JobMatchStep } from './steps/JobMatchStep'
 import { ExportStep } from './steps/ExportStep'
@@ -112,7 +111,6 @@ export function Builder() {
     skills: <SkillsStep />,
     summary: <SummaryStep />,
     extras: <ExtrasStep />,
-    portfolio: <PortfolioStep />,
     review: <ReviewStep />,
     jobmatch: <JobMatchStep />,
     export: <ExportStep />,

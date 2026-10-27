@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { ensureSchema } from '@/lib/ensure-schema'
 import { normalizeUsername, USERNAME_RE } from '@/lib/cv/username'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ username: string }> }) {
+  await ensureSchema()
   const { username: raw } = await ctx.params
   const username = normalizeUsername(decodeURIComponent(raw))
   if (!USERNAME_RE.test(username)) {

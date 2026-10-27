@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { ensureSchema } from '@/lib/ensure-schema'
 import { validateUsername } from '@/lib/cv/username'
 import { createSessionToken, hashPassword, sessionCookieOptions, SESSION_COOKIE } from '@/lib/auth'
 import { rateLimited, clientIp } from '@/lib/rate-limit'
@@ -29,6 +30,7 @@ const MAX_CV_CHARS = 300_000
 const MAX_PORTFOLIO_CHARS = 1_500_000
 
 export async function POST(req: NextRequest) {
+  await ensureSchema()
   const ip = clientIp(req)
   if (rateLimited(`signup:${ip}`, 10, 60 * 60 * 1000)) {
     return NextResponse.json({ error: 'Too many attempts — try again later' }, { status: 429 })

@@ -1,5 +1,6 @@
 import { ImageResponse } from 'next/og'
 import { db } from '@/lib/db'
+import { ensureSchema } from '@/lib/ensure-schema'
 import { normalizeUsername, USERNAME_RE } from '@/lib/cv/username'
 
 export const dynamic = 'force-dynamic'
@@ -10,6 +11,7 @@ export const contentType = 'image/png'
 const SIZE = { width: 1200, height: 630 }
 
 export async function GET(_req: Request, ctx: { params: Promise<{ username: string }> }) {
+  await ensureSchema()
   const { username: raw } = await ctx.params
   const username = normalizeUsername(decodeURIComponent(raw))
 

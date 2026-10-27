@@ -9,11 +9,11 @@ import { SAMPLE_CV } from './sample'
 
 export type BuilderStep =
   | 'template' | 'contact' | 'experience' | 'education' | 'skills'
-  | 'summary' | 'extras' | 'portfolio' | 'review' | 'jobmatch' | 'export'
+  | 'summary' | 'extras' | 'review' | 'jobmatch' | 'export'
 
 export const STEP_ORDER: BuilderStep[] = [
   'template', 'contact', 'experience', 'education', 'skills',
-  'summary', 'extras', 'portfolio', 'review', 'jobmatch', 'export',
+  'summary', 'extras', 'review', 'jobmatch', 'export',
 ]
 
 export const STEP_META: Record<BuilderStep, { title: string; hint: string }> = {
@@ -24,10 +24,9 @@ export const STEP_META: Record<BuilderStep, { title: string; hint: string }> = {
   skills: { title: 'Skills', hint: 'What you are great at' },
   summary: { title: 'Professional Summary', hint: 'Your story in a few lines' },
   extras: { title: 'Projects & Extras', hint: 'Projects, certifications, languages' },
-  portfolio: { title: 'Portfolio Website', hint: 'Turn your CV into a personal website' },
   review: { title: 'Review & Score', hint: 'How strong is your CV?' },
   jobmatch: { title: 'Job Match', hint: 'Beat the ATS robots' },
-  export: { title: 'Export & Share', hint: 'Download or publish your CV' },
+  export: { title: 'Export & Share', hint: 'Download, portfolio website & publish' },
 }
 
 interface SeemehereState {

@@ -77,20 +77,17 @@ export function ShareView({ username }: { username: string }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-200">
-      {/* Slim bar (classic CV view only) */}
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex h-12 max-w-4xl items-center justify-between px-4">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 text-xs font-black text-white">S</span>
-            <span className="text-sm font-extrabold tracking-tight text-slate-800">SEEMEHERE</span>
-          </Link>
-          {showPortfolio === false && pf?.enabled && (
-            <Link href={typeof window !== 'undefined' ? window.location.pathname : '#'} className="text-[11px] font-semibold text-violet-600 hover:underline">
-              View website →
-            </Link>
-          )}
-        </div>
-      </header>
+      {/* Floating website switch — appears only when the owner has a portfolio
+          site and the visitor forced the paper-CV view (?mode=cv).
+          No SEEMEHERE chrome on the owner's page — branding stays in the tiny footer pill. */}
+      {showPortfolio === false && pf?.enabled && (
+        <Link
+          href={typeof window !== 'undefined' ? window.location.pathname : '#'}
+          className="fixed right-4 top-4 z-30 rounded-full border border-slate-200 bg-white/95 px-3.5 py-1.5 text-[11px] font-semibold text-violet-600 shadow-sm backdrop-blur hover:bg-white"
+        >
+          View website →
+        </Link>
+      )}
 
       <main ref={wrapRef} className="mx-auto w-full max-w-4xl flex-1 px-3 py-6">
         {state === 'loading' && (
