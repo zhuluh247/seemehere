@@ -1,18 +1,26 @@
 import type { Metadata } from 'next'
 import { Toaster } from '@/components/ui/toaster'
+import { getSiteSettings } from '@/lib/settings'
 import { siteUrl } from '@/lib/site'
 import './globals.css'
 
-export const metadata: Metadata = {
-  // Real domain so OG/Twitter preview cards resolve on social shares.
-  // Domain-agnostic: set NEXT_PUBLIC_SITE_URL when you move to your own domain.
-  metadataBase: new URL(siteUrl()),
-  title: 'SEEMEHERE — Free CV Builder | Your CV. One link. Seen everywhere.',
-  description:
-    'Build a beautiful, ATS-proof CV free in 10 guided steps. 6 templates, every color editable, AI writing help, PDF/PNG/Word export and a personal share link at cv/yourname. No signup, no watermark, £0 forever.',
-  keywords: ['free CV builder', 'resume builder', 'ATS resume', 'CV templates', 'AI CV', 'SEEMEHERE'],
-  applicationName: 'SEEMEHERE',
-  robots: { index: true, follow: true },
+// ISR for the static pages: admin SEO edits (title/description) show up
+// within 5 minutes, no redeploy needed. Dynamic routes are unaffected.
+export const revalidate = 300
+
+export async function generateMetadata(): Promise<Metadata> {
+  // Admin-editable defaults (60s cache + built-in fallbacks — never throws)
+  const settings = await getSiteSettings()
+  return {
+    // Real domain so OG/Twitter preview cards resolve on social shares.
+    // Domain-agnostic: set NEXT_PUBLIC_SITE_URL when you move to your own domain.
+    metadataBase: new URL(siteUrl()),
+    title: settings.siteTitle,
+    description: settings.siteDescription,
+    keywords: ['free CV builder', 'resume builder', 'ATS resume', 'CV templates', 'AI CV', 'SEEMEHERE'],
+    applicationName: 'SEEMEHERE',
+    robots: { index: true, follow: true },
+  }
 }
 
 export const viewport = {

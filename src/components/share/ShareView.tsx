@@ -45,7 +45,9 @@ export function ShareView({ username }: { username: string }) {
 
   useEffect(() => {
     let alive = true
-    fetch(`/api/cv/${encodeURIComponent(username)}`)
+    // Tell the analytics hook when a visitor forced the paper-CV view (?mode=cv)
+    const modeParam = new URLSearchParams(window.location.search).get('mode') === 'cv' ? '?mode=cv' : ''
+    fetch(`/api/cv/${encodeURIComponent(username)}${modeParam}`)
       .then(async (res) => {
         if (!alive) return
         if (res.status === 404) return setState('notfound')

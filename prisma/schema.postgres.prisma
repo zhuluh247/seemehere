@@ -52,3 +52,22 @@ model PublishedCv {
   publishedAt   DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+// R4 — privacy-light page-view analytics (no IPs / fingerprints stored)
+model PageView {
+  id        String   @id @default(cuid())
+  username  String
+  mode      String   @default("cv")
+  referrer  String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([username])
+  @@index([createdAt])
+}
+
+// R4 — admin-editable site settings (SEO defaults etc.)
+model SiteSetting {
+  key       String   @id
+  value     String   @default("")
+  updatedAt DateTime @updatedAt
+}

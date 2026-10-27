@@ -60,6 +60,21 @@ const PG_STATEMENTS: string[] = [
   `ALTER TABLE "PublishedCv" ADD COLUMN IF NOT EXISTS "portfolioJson" TEXT NOT NULL DEFAULT '{}'`,
   `ALTER TABLE "PublishedCv" ADD COLUMN IF NOT EXISTS "photoData" TEXT NOT NULL DEFAULT ''`,
   `ALTER TABLE "PublishedCv" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP`,
+  // R4 — page-view analytics + site settings
+  `CREATE TABLE IF NOT EXISTS "PageView" (
+    "id" TEXT PRIMARY KEY,
+    "username" TEXT NOT NULL,
+    "mode" TEXT NOT NULL DEFAULT 'cv',
+    "referrer" TEXT NOT NULL DEFAULT '',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE INDEX IF NOT EXISTS "PageView_username_idx" ON "PageView"("username")`,
+  `CREATE INDEX IF NOT EXISTS "PageView_createdAt_idx" ON "PageView"("createdAt")`,
+  `CREATE TABLE IF NOT EXISTS "SiteSetting" (
+    "key" TEXT PRIMARY KEY,
+    "value" TEXT NOT NULL DEFAULT '',
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
 ]
 
 let ensured: Promise<void> | null = null

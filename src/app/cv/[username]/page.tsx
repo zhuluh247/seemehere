@@ -1,10 +1,15 @@
 import type { Metadata } from 'next'
 import { ShareView } from '@/components/share/ShareView'
 import { db } from '@/lib/db'
+import { getSiteSettings } from '@/lib/settings'
 import { normalizeUsername, USERNAME_RE } from '@/lib/cv/username'
 
 // Canonical public share route: /cv/{username}
 // (also reachable as /?cv={username})
+
+// Always render fresh: the robots meta must follow the admin "Index public
+// CV pages" toggle immediately (never serve a stale cached shell).
+export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }): Promise<Metadata> {
   const { username: raw } = await params
@@ -27,13 +32,20 @@ export async function generateMetadata({ params }: { params: Promise<{ username:
     }
   } catch {}
 
+  // Admin SEO toggle: public CV pages stay unlisted by design unless the
+  // site owner opted into indexing (also flips sitemap.xml + robots.txt).
+  let indexCvPages = false
+  try {
+    indexCvPages = (await getSiteSettings()).indexCvPages
+  } catch {}
+
   const title = jobTitle ? `${displayName} — ${jobTitle}` : `${displayName} — CV`
   const description = (summary || `CV of ${displayName}, built free with SEEMEHERE.`).slice(0, 180)
 
   return {
     title,
     description,
-    robots: { index: false, follow: false }, // unlisted by design
+    robots: indexCvPages ? { index: true, follow: true } : { index: false, follow: false },
     openGraph: {
       title,
       description,

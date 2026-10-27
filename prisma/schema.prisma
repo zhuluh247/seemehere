@@ -51,3 +51,24 @@ model PublishedCv {
   publishedAt   DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+// R4 — privacy-light page-view analytics for public share pages.
+// No IPs, no fingerprints, no user agents stored — just which page was
+// viewed, in which mode (paper CV / portfolio website) and when.
+model PageView {
+  id        String   @id @default(cuid())
+  username  String // which published CV was viewed
+  mode      String   @default("cv") // "cv" (paper) | "site" (portfolio website)
+  referrer  String   @default("") // document referrer HOST only, "" when direct/internal
+  createdAt DateTime @default(now())
+
+  @@index([username])
+  @@index([createdAt])
+}
+
+// R4 — admin-editable site settings (SEO defaults etc.), flat key-value.
+model SiteSetting {
+  key       String   @id
+  value     String   @default("")
+  updatedAt DateTime @updatedAt
+}

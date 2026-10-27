@@ -17,9 +17,33 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ username: s
   const row = await db.publishedCv.findUnique({ where: { username } })
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  // Fire-and-forget view counter (skipped for owner stat checks)
+  // Fire-and-forget analytics (skipped for owner stat checks and bots).
+  // PageView is privacy-light: no IPs, no user agents — just the page,
+  // the view mode, and the referrer HOST. Bots are filtered so the
+  // owner-facing viewCount stays human too.
   if (!statsOnly) {
-    db.publishedCv.update({ where: { username }, data: { viewCount: { increment: 1 } } }).catch(() => {})
+    const ua = (req.headers.get('user-agent') || '').toLowerCase()
+    const isBot = /bot|crawl|spider|slurp|preview|monitor|uptime|pingdom|lighthouse|headless|curl|wget|python-requests|favicon/.test(ua)
+
+    let portfolioEnabled = false
+    try {
+      portfolioEnabled = Boolean((JSON.parse(row.portfolioJson || '{}') as { enabled?: unknown }).enabled)
+    } catch {}
+    // ShareView appends ?mode=cv when the visitor forces the paper-CV view
+    const mode = req.nextUrl.searchParams.get('mode') === 'cv' ? 'cv' : portfolioEnabled ? 'site' : 'cv'
+
+    // Referrer host only (never the full path) — "" for direct/internal traffic
+    let referrer = ''
+    try {
+      const ref = req.headers.get('referer')
+      const refHost = ref ? new URL(ref).host : ''
+      if (refHost && refHost !== req.headers.get('host')) referrer = refHost
+    } catch {}
+
+    if (!isBot) {
+      db.publishedCv.update({ where: { username }, data: { viewCount: { increment: 1 } } }).catch(() => {})
+      db.pageView.create({ data: { username, mode, referrer } }).catch(() => {})
+    }
   }
 
   let theme: Record<string, string> = {}
