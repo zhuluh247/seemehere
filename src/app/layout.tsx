@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Toaster } from '@/components/ui/toaster'
+import { VisitPing } from '@/components/landing/VisitPing'
 import { getSiteSettings } from '@/lib/settings'
 import { siteUrl } from '@/lib/site'
 import './globals.css'
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body className="antialiased">
         {children}
+        <VisitPing />
         <Toaster />
       </body>
     </html>

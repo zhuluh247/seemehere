@@ -7,6 +7,7 @@ import {
   Eye,
   FileText,
   Globe2,
+  Home,
   Info,
   Lock,
   LogOut,
@@ -39,8 +40,17 @@ interface TopRow {
 }
 
 interface Stats {
-  totals: { published: number; users: number; viewsAllTime: number; views7: number; views30: number }
-  daily: { date: string; views: number }[]
+  totals: {
+    published: number
+    users: number
+    viewsAllTime: number
+    views7: number
+    views30: number
+    homeAllTime: number
+    home7: number
+    home30: number
+  }
+  daily: { date: string; views: number; home: number }[]
   top: TopRow[]
   recent: TopRow[]
 }
@@ -260,7 +270,7 @@ export function AdminDashboard() {
   }
 
   // ── dashboard ─────────────────────────────────────────────────────────────
-  const maxDaily = Math.max(1, ...(stats?.daily.map((d) => d.views) || [1]))
+  const maxDaily = Math.max(1, ...(stats?.daily.map((d) => d.views + d.home) || [1]))
   const totals = stats?.totals
 
   return (
@@ -307,46 +317,86 @@ export function AdminDashboard() {
         {tab === 'overview' && (
           <div className="space-y-6">
             {/* stat cards */}
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
               {[
-                { label: 'Published CVs', value: totals?.published, icon: FileText },
-                { label: 'Accounts', value: totals?.users, icon: Users },
-                { label: 'Views (all time)', value: totals?.viewsAllTime, icon: Globe2, accent: true },
-                { label: 'Views (7 days)', value: totals?.views7, icon: Eye },
-                { label: 'Views (30 days)', value: totals?.views30, icon: BarChart3 },
+                { label: 'Published CVs', value: totals?.published, icon: FileText, tone: 'plain' as const },
+                { label: 'Accounts', value: totals?.users, icon: Users, tone: 'plain' as const },
+                { label: 'Website visitors', value: totals?.homeAllTime, icon: Home, tone: 'emerald' as const },
+                { label: 'CV views (all time)', value: totals?.viewsAllTime, icon: Globe2, tone: 'indigo' as const },
+                { label: 'CV views (7 days)', value: totals?.views7, icon: Eye, tone: 'plain' as const },
+                { label: 'CV views (30 days)', value: totals?.views30, icon: BarChart3, tone: 'plain' as const },
               ].map((c) => (
                 <div
                   key={c.label}
-                  className={`rounded-2xl border bg-white p-4 shadow-sm ${c.accent ? 'border-indigo-200 bg-indigo-50/40' : 'border-slate-200'}`}
+                  className={`rounded-2xl border bg-white p-4 shadow-sm ${
+                    c.tone === 'indigo'
+                      ? 'border-indigo-200 bg-indigo-50/40'
+                      : c.tone === 'emerald'
+                        ? 'border-emerald-200 bg-emerald-50/40'
+                        : 'border-slate-200'
+                  }`}
                 >
                   <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
-                    <c.icon className={`h-3.5 w-3.5 ${c.accent ? 'text-indigo-600' : 'text-slate-400'}`} />
+                    <c.icon
+                      className={`h-3.5 w-3.5 ${
+                        c.tone === 'indigo' ? 'text-indigo-600' : c.tone === 'emerald' ? 'text-emerald-600' : 'text-slate-400'
+                      }`}
+                    />
                     {c.label}
                   </div>
-                  <div className={`mt-1.5 text-2xl font-bold tabular-nums ${c.accent ? 'text-indigo-700' : 'text-slate-900'}`}>
+                  <div
+                    className={`mt-1.5 text-2xl font-bold tabular-nums ${
+                      c.tone === 'indigo' ? 'text-indigo-700' : c.tone === 'emerald' ? 'text-emerald-700' : 'text-slate-900'
+                    }`}
+                  >
                     {c.value === undefined ? <span className="text-slate-300">—</span> : nf.format(c.value)}
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* 30-day chart */}
+            {/* 30-day chart — stacked: CV views + website visitors */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-slate-900">Page views — last 30 days</h2>
-                <Button variant="ghost" size="sm" onClick={() => void loadStats()} disabled={statsLoading} className="text-slate-500">
-                  <RefreshCw className={`mr-1.5 h-4 w-4 ${statsLoading ? 'animate-spin' : ''}`} /> Refresh
-                </Button>
+                <h2 className="text-sm font-semibold text-slate-900">Traffic — last 30 days</h2>
+                <div className="flex items-center gap-3">
+                  <span className="hidden items-center gap-1.5 text-[11px] text-slate-500 sm:inline-flex">
+                    <span className="h-2.5 w-2.5 rounded-sm bg-indigo-500" /> CV views
+                  </span>
+                  <span className="hidden items-center gap-1.5 text-[11px] text-slate-500 sm:inline-flex">
+                    <span className="h-2.5 w-2.5 rounded-sm bg-emerald-400" /> Website visitors
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={() => void loadStats()} disabled={statsLoading} className="text-slate-500">
+                    <RefreshCw className={`mr-1.5 h-4 w-4 ${statsLoading ? 'animate-spin' : ''}`} /> Refresh
+                  </Button>
+                </div>
               </div>
               <div className="flex h-36 items-end gap-[3px]">
-                {(stats?.daily || Array.from({ length: 30 }, (_, i) => ({ date: String(i), views: 0 }))).map((d, i) => (
-                  <div
-                    key={i}
-                    className="group relative flex-1 rounded-t bg-indigo-500/80 transition-colors hover:bg-indigo-600"
-                    style={{ height: `${Math.max(3, (d.views / maxDaily) * 100)}%`, minWidth: 4 }}
-                    title={`${d.date}: ${nf.format(d.views)} view${d.views === 1 ? '' : 's'}`}
-                  />
-                ))}
+                {(stats?.daily || Array.from({ length: 30 }, (_, i) => ({ date: String(i), views: 0, home: 0 }))).map((d, i) => {
+                  const total = d.views + d.home
+                  return (
+                    <div
+                      key={i}
+                      className="group relative flex h-full flex-1 flex-col justify-end"
+                      style={{ minWidth: 4 }}
+                      title={`${d.date}: ${nf.format(d.views)} CV view${d.views === 1 ? '' : 's'} · ${nf.format(d.home)} site visitor${d.home === 1 ? '' : 's'}`}
+                    >
+                      {d.home > 0 && (
+                        <div
+                          className="rounded-t bg-emerald-400/90 transition-colors group-hover:bg-emerald-500"
+                          style={{ height: `${Math.max(2, (d.home / maxDaily) * 100)}%` }}
+                        />
+                      )}
+                      {d.views > 0 && (
+                        <div
+                          className={`${d.home > 0 ? '' : 'rounded-t'} bg-indigo-500/80 transition-colors group-hover:bg-indigo-600`}
+                          style={{ height: `${Math.max(2, (d.views / maxDaily) * 100)}%` }}
+                        />
+                      )}
+                      {total === 0 && <div className="h-[2px] rounded-t bg-slate-200" />}
+                    </div>
+                  )
+                })}
               </div>
               <div className="mt-2 flex justify-between text-[11px] text-slate-400">
                 <span>{stats?.daily[0]?.date || ''}</span>
@@ -456,7 +506,8 @@ export function AdminDashboard() {
 
             <p className="text-xs leading-5 text-slate-400">
               Analytics are privacy-light: no IPs, no user agents, no fingerprints — just which page was viewed, in which
-              mode, and when. Bot traffic is filtered out automatically.
+              mode, and when. Bot traffic is filtered out automatically. “Website visitors” counts home-page sessions
+              (one per browser per day); “CV views” counts public CV and portfolio page loads.
             </p>
           </div>
         )}

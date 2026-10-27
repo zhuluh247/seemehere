@@ -12,6 +12,11 @@ import { dateRange } from '@/components/cv/templates/shared'
 // ─── Portfolio website renderer ─────────────────────────────────────────────
 // Website-style share page. No SEEMEHERE header, no "unlisted" chrome —
 // the owner's name is the brand. Tiny footer credit only.
+//
+// R5: three website layouts (PortfolioSpec.layout):
+//   signature — centered hero with soft radial glow (the original)
+//   horizon   — bold full-width accent banner, left-aligned, punchy
+//   spotlight — editorial: huge centered type, flat bordered cards
 
 interface PortfolioSiteProps {
   data: CvData
@@ -30,8 +35,28 @@ const withProtocol = (url: string): string => {
   return `https://${u}`
 }
 
-/** Section heading with accent tick — module-level so it's a stable component */
-function SectionTitle({ accent, children }: { accent: string; children: React.ReactNode }) {
+type LayoutId = 'signature' | 'horizon' | 'spotlight'
+
+/** Section heading — one component, three accents (one per layout) */
+function SectionTitle({ accent, layout, dark, children }: { accent: string; layout: LayoutId; dark: boolean; children: React.ReactNode }) {
+  if (layout === 'spotlight') {
+    return (
+      <div className="mb-8 flex items-center justify-center gap-4">
+        <span className={`h-px w-10 ${dark ? 'bg-slate-700' : 'bg-slate-300'}`} />
+        <h2 className="text-xs font-bold uppercase tracking-[0.3em]">{children}</h2>
+        <span className={`h-px w-10 ${dark ? 'bg-slate-700' : 'bg-slate-300'}`} />
+      </div>
+    )
+  }
+  if (layout === 'horizon') {
+    return (
+      <div className="mb-6 flex items-center gap-3">
+        <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: accent }} />
+        <h2 className="text-xl font-extrabold uppercase tracking-tight sm:text-2xl">{children}</h2>
+      </div>
+    )
+  }
+  // signature
   return (
     <div className="mb-6 flex items-center gap-3">
       <span className="h-px w-8" style={{ background: accent }} />
@@ -60,6 +85,7 @@ export function PortfolioSite({ data, photoData, portfolio, preview, username }:
   const p = normalizePortfolio(portfolio)
   const c = data.contact
   const dark = p.mode === 'dark'
+  const layout: LayoutId = p.layout
   const accent = /^#[0-9a-fA-F]{3,8}$/.test(p.accent) ? p.accent : '#4F46E5'
 
   const sections = p.sections
@@ -75,118 +101,295 @@ export function PortfolioSite({ data, photoData, portfolio, preview, username }:
     socials.push({ kind: l.kind, label: l.label || l.kind, url: l.url })
   }
 
+  // ── per-layout styling tokens ──────────────────────────────────────────────
   const shell = dark
     ? 'bg-slate-950 text-slate-200'
     : 'bg-white text-slate-800'
   const soft = dark ? 'text-slate-400' : 'text-slate-500'
-  const card = dark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+  const wrap =
+    layout === 'spotlight'
+      ? 'mx-auto max-w-3xl px-6 sm:px-10'
+      : layout === 'horizon'
+        ? 'mx-auto max-w-5xl px-6 sm:px-10'
+        : 'mx-auto max-w-4xl px-6 sm:px-10'
+
+  // card / chip surfaces per layout
+  const card =
+    layout === 'spotlight'
+      ? dark
+        ? 'bg-slate-950 border border-slate-800'
+        : 'bg-white border border-slate-200'
+      : dark
+        ? 'bg-slate-900 border border-slate-800 shadow-sm'
+        : 'bg-white border border-slate-200 shadow-sm'
   const chip = dark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-700'
+  const chipSpotlight = dark ? 'border border-slate-700 text-slate-300' : 'border border-slate-300 text-slate-600'
+
+  const heroSocialCls =
+    layout === 'horizon'
+      ? 'inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/40 bg-white/10 text-white transition-transform hover:scale-110'
+      : layout === 'spotlight'
+        ? `inline-flex h-10 w-10 items-center justify-center rounded-full transition-transform hover:scale-110 ${dark ? 'border border-slate-700 text-slate-300' : 'border border-slate-300 text-slate-600'}`
+        : `inline-flex h-10 w-10 items-center justify-center rounded-full border transition-transform hover:scale-110 ${dark ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700'}`
 
   const cvLink = username && !preview ? `/cv/${username}?mode=cv` : undefined
 
   return (
     <div className={`${shell} min-h-full font-sans`} style={{ ['--pa' as string]: accent }}>
-      {/* ── Hero ── */}
-      <section
-        className="relative overflow-hidden px-6 pb-16 pt-20 text-center sm:px-10 sm:pt-24"
-        style={{
-          background: dark
-            ? `radial-gradient(ellipse 70% 60% at 50% -10%, ${accent}33, transparent), #020617`
-            : `radial-gradient(ellipse 70% 60% at 50% -10%, ${accent}1f, transparent), #ffffff`,
-        }}
-      >
-        <div className="mx-auto max-w-3xl">
-          {photoData && (
-            <img
-              src={photoData}
-              alt={c.fullName || 'Profile'}
-              className="mx-auto mb-7 h-28 w-28 rounded-full border-4 object-cover shadow-xl"
-              style={{ borderColor: accent }}
-            />
-          )}
-          <h1 className="text-4xl font-black tracking-tight sm:text-6xl">{c.fullName || 'Your Name'}</h1>
-          {tagline && (
-            <p className="mt-4 text-base font-medium sm:text-lg" style={{ color: accent }}>
-              {tagline}
-            </p>
-          )}
-          {c.location && <p className={`mt-3 text-sm ${soft} inline-flex items-center gap-1.5`}><MapPin className="h-3.5 w-3.5" /> {c.location}</p>}
-
-          {/* Socials */}
-          {(socials.length > 0 || c.email) && (
-            <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5">
-              {c.email && (
+      {/* ═══ HERO — three layouts ═══ */}
+      {layout === 'horizon' ? (
+        // ── Horizon: bold accent banner, left-aligned ──
+        <section
+          className="relative overflow-hidden px-6 pb-16 pt-16 text-white sm:px-10 sm:pt-20"
+          style={{
+            background: `linear-gradient(140deg, ${accent} 0%, color-mix(in srgb, ${accent} 55%, #020617) 78%)`,
+          }}
+        >
+          <div
+            className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full"
+            style={{ background: 'rgba(255,255,255,.09)' }}
+          />
+          <div
+            className="pointer-events-none absolute -bottom-32 left-1/3 h-64 w-64 rounded-full"
+            style={{ background: 'rgba(255,255,255,.06)' }}
+          />
+          <div className="relative mx-auto max-w-5xl">
+            {photoData && (
+              <img
+                src={photoData}
+                alt={c.fullName || 'Profile'}
+                className="mb-7 h-24 w-24 rounded-2xl border-4 object-cover shadow-xl"
+                style={{ borderColor: 'rgba(255,255,255,.4)' }}
+              />
+            )}
+            <p className="text-xs font-bold uppercase tracking-[0.3em] opacity-80">{tagline || 'Portfolio'}</p>
+            <h1 className="mt-3 max-w-3xl text-4xl font-black leading-[1.05] tracking-tight sm:text-6xl">
+              {c.fullName || 'Your Name'}
+            </h1>
+            {c.location && (
+              <p className="mt-4 inline-flex items-center gap-1.5 text-sm opacity-85">
+                <MapPin className="h-3.5 w-3.5" /> {c.location}
+              </p>
+            )}
+            {(socials.length > 0 || c.email) && (
+              <div className="mt-7 flex flex-wrap items-center gap-2.5">
+                {c.email && (
+                  <a
+                    href={`mailto:${c.email}`}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-900 transition-transform hover:scale-110"
+                    aria-label="Email"
+                  >
+                    <Mail className="h-4.5 w-4.5" />
+                  </a>
+                )}
+                {socials.map((s, i) => (
+                  <a
+                    key={i}
+                    href={withProtocol(s.url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={s.label}
+                    className={heroSocialCls}
+                  >
+                    <BrandIcon kind={s.kind} className="h-4.5 w-4.5" />
+                  </a>
+                ))}
+              </div>
+            )}
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              {cvLink && (
                 <a
-                  href={`mailto:${c.email}`}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full text-white transition-transform hover:scale-110"
-                  style={{ background: accent }}
-                  aria-label="Email"
+                  href={cvLink}
+                  className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-bold text-slate-900 shadow-lg transition-transform hover:-translate-y-0.5"
                 >
-                  <Mail className="h-4.5 w-4.5" />
+                  <FileDown className="h-4 w-4" /> Get my CV
                 </a>
               )}
-              {socials.map((s, i) => (
+              {c.email && sections.contact !== false && (
                 <a
-                  key={i}
-                  href={withProtocol(s.url)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={s.label}
-                  className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition-transform hover:scale-110 ${card}`}
+                  href={`mailto:${c.email}`}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/10 px-6 py-2.5 text-sm font-semibold text-white backdrop-blur transition-transform hover:-translate-y-0.5 hover:bg-white/20"
                 >
-                  <BrandIcon kind={s.kind} className="h-4.5 w-4.5" />
+                  <Mail className="h-4 w-4" /> Hire me
                 </a>
-              ))}
+              )}
             </div>
-          )}
-
-          {/* CTAs */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            {cvLink && (
-              <a
-                href={cvLink}
-                className="inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold text-white shadow-lg transition-transform hover:-translate-y-0.5"
-                style={{ background: accent }}
-              >
-                <FileDown className="h-4 w-4" /> Get my CV
-              </a>
-            )}
-            {c.email && sections.contact !== false && (
-              <a
-                href={`mailto:${c.email}`}
-                className={`inline-flex items-center gap-2 rounded-full border px-6 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-0.5 ${card}`}
-              >
-                <Mail className="h-4 w-4" /> Hire me
-              </a>
-            )}
           </div>
-        </div>
-      </section>
+        </section>
+      ) : layout === 'spotlight' ? (
+        // ── Spotlight: editorial, huge centered type ──
+        <section
+          className={`px-6 pb-14 pt-20 text-center sm:pt-28 ${dark ? '' : 'bg-white'}`}
+          style={
+            dark
+              ? { background: `radial-gradient(ellipse 60% 50% at 50% -10%, ${accent}22, transparent), #020617` }
+              : undefined
+          }
+        >
+          <div className="mx-auto max-w-3xl">
+            {photoData && (
+              <img
+                src={photoData}
+                alt={c.fullName || 'Profile'}
+                className="mx-auto mb-8 h-24 w-24 rounded-full object-cover"
+                style={{ border: `2px solid ${accent}` }}
+              />
+            )}
+            <h1 className="text-5xl font-black leading-[1.02] tracking-tight sm:text-7xl">{c.fullName || 'Your Name'}</h1>
+            {tagline && (
+              <p className="mt-6 text-[11px] font-bold uppercase tracking-[0.35em]" style={{ color: accent }}>
+                {tagline}
+              </p>
+            )}
+            {c.location && <p className={`mt-4 text-sm ${soft} inline-flex items-center gap-1.5`}><MapPin className="h-3.5 w-3.5" /> {c.location}</p>}
+            {(socials.length > 0 || c.email) && (
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                {c.email && (
+                  <a
+                    href={`mailto:${c.email}`}
+                    className={`inline-flex h-10 w-10 items-center justify-center rounded-full transition-transform hover:scale-110 ${dark ? 'text-slate-300' : 'text-slate-600'}`}
+                    style={{ border: `1px solid ${accent}`, color: accent }}
+                    aria-label="Email"
+                  >
+                    <Mail className="h-4.5 w-4.5" />
+                  </a>
+                )}
+                {socials.map((s, i) => (
+                  <a
+                    key={i}
+                    href={withProtocol(s.url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={s.label}
+                    className={heroSocialCls}
+                  >
+                    <BrandIcon kind={s.kind} className="h-4.5 w-4.5" />
+                  </a>
+                ))}
+              </div>
+            )}
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+              {cvLink && (
+                <a
+                  href={cvLink}
+                  className="inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-70"
+                  style={{ color: accent }}
+                >
+                  <FileDown className="h-4 w-4" /> Get my CV
+                </a>
+              )}
+              {c.email && sections.contact !== false && (
+                <a
+                  href={`mailto:${c.email}`}
+                  className={`inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-70 ${dark ? 'text-slate-200' : 'text-slate-800'}`}
+                >
+                  <Mail className="h-4 w-4" /> Hire me
+                </a>
+              )}
+            </div>
+          </div>
+        </section>
+      ) : (
+        // ── Signature: centered hero with soft radial glow (original) ──
+        <section
+          className="relative overflow-hidden px-6 pb-16 pt-20 text-center sm:px-10 sm:pt-24"
+          style={{
+            background: dark
+              ? `radial-gradient(ellipse 70% 60% at 50% -10%, ${accent}33, transparent), #020617`
+              : `radial-gradient(ellipse 70% 60% at 50% -10%, ${accent}1f, transparent), #ffffff`,
+          }}
+        >
+          <div className="mx-auto max-w-3xl">
+            {photoData && (
+              <img
+                src={photoData}
+                alt={c.fullName || 'Profile'}
+                className="mx-auto mb-7 h-28 w-28 rounded-full border-4 object-cover shadow-xl"
+                style={{ borderColor: accent }}
+              />
+            )}
+            <h1 className="text-4xl font-black tracking-tight sm:text-6xl">{c.fullName || 'Your Name'}</h1>
+            {tagline && (
+              <p className="mt-4 text-base font-medium sm:text-lg" style={{ color: accent }}>
+                {tagline}
+              </p>
+            )}
+            {c.location && <p className={`mt-3 text-sm ${soft} inline-flex items-center gap-1.5`}><MapPin className="h-3.5 w-3.5" /> {c.location}</p>}
+            {(socials.length > 0 || c.email) && (
+              <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5">
+                {c.email && (
+                  <a
+                    href={`mailto:${c.email}`}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full text-white transition-transform hover:scale-110"
+                    style={{ background: accent }}
+                    aria-label="Email"
+                  >
+                    <Mail className="h-4.5 w-4.5" />
+                  </a>
+                )}
+                {socials.map((s, i) => (
+                  <a
+                    key={i}
+                    href={withProtocol(s.url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={s.label}
+                    className={heroSocialCls}
+                  >
+                    <BrandIcon kind={s.kind} className="h-4.5 w-4.5" />
+                  </a>
+                ))}
+              </div>
+            )}
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              {cvLink && (
+                <a
+                  href={cvLink}
+                  className="inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold text-white shadow-lg transition-transform hover:-translate-y-0.5"
+                  style={{ background: accent }}
+                >
+                  <FileDown className="h-4 w-4" /> Get my CV
+                </a>
+              )}
+              {c.email && sections.contact !== false && (
+                <a
+                  href={`mailto:${c.email}`}
+                  className={`inline-flex items-center gap-2 rounded-full border px-6 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-0.5 ${dark ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-white border-slate-200 text-slate-800'}`}
+                >
+                  <Mail className="h-4 w-4" /> Hire me
+                </a>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
-      <div className="mx-auto max-w-4xl px-6 sm:px-10">
+      <div className={wrap}>
         {/* ── About ── */}
         {sections.about && about && (
           <section className="py-12">
-            <SectionTitle accent={accent}>About</SectionTitle>
-            <p className={`whitespace-pre-line leading-relaxed ${dark ? 'text-slate-300' : 'text-slate-600'}`}>{about}</p>
+            <SectionTitle accent={accent} layout={layout} dark={dark}>About</SectionTitle>
+            <p className={`whitespace-pre-line leading-relaxed ${layout === 'spotlight' ? 'text-center text-base' : ''} ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
+              {about}
+            </p>
           </section>
         )}
 
         {/* ── Projects ── */}
         {sections.projects && p.projects.length > 0 && (
           <section className="py-12">
-            <SectionTitle accent={accent}>Projects</SectionTitle>
-            <div className="grid gap-6 sm:grid-cols-2">
+            <SectionTitle accent={accent} layout={layout} dark={dark}>Projects</SectionTitle>
+            <div className={`grid gap-6 ${layout === 'horizon' ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2'}`}>
               {p.projects.filter((pr) => pr.title || pr.image).map((pr) => (
-                <div key={pr.id} className={`overflow-hidden rounded-2xl border shadow-sm transition-shadow hover:shadow-lg ${card}`}>
+                <div key={pr.id} className={`overflow-hidden rounded-2xl border transition-shadow ${layout === 'spotlight' ? '' : 'shadow-sm hover:shadow-lg'} ${card}`}>
                   {pr.image && <img src={pr.image} alt={pr.title || 'Project'} className="h-44 w-full object-cover" />}
                   <div className="p-5">
                     <h3 className="font-bold">{pr.title}</h3>
                     {pr.tags && (
                       <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        {pr.tags.split(/[·,|]/).map((t) => (
+                        {pr.tags.split(/[·,|]/).map((t, ti) => (
                           t.trim() && (
-                            <span key={t} className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${chip}`}>
+                            <span key={`${t}-${ti}`} className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${layout === 'spotlight' ? chipSpotlight : chip}`}>
                               {t.trim()}
                             </span>
                           )
@@ -218,10 +421,10 @@ export function PortfolioSite({ data, photoData, portfolio, preview, username }:
         {/* ── Gallery ── */}
         {sections.gallery !== false && p.gallery.length > 0 && (
           <section className="py-12">
-            <SectionTitle accent={accent}>Gallery</SectionTitle>
+            <SectionTitle accent={accent} layout={layout} dark={dark}>Gallery</SectionTitle>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {p.gallery.filter((g) => g.image).map((g) => (
-                <figure key={g.id} className={`group overflow-hidden rounded-2xl border shadow-sm ${card}`}>
+                <figure key={g.id} className={`group overflow-hidden rounded-2xl border ${card}`}>
                   <a href={g.image} target="_blank" rel="noopener noreferrer" className="block">
                     <img
                       src={g.image}
@@ -241,7 +444,7 @@ export function PortfolioSite({ data, photoData, portfolio, preview, username }:
         {/* ── Experience ── */}
         {sections.experience && data.experience.length > 0 && (
           <section className="py-12">
-            <SectionTitle accent={accent}>Experience</SectionTitle>
+            <SectionTitle accent={accent} layout={layout} dark={dark}>Experience</SectionTitle>
             <div className="relative space-y-8 pl-6">
               <span className={`absolute left-0 top-2 bottom-2 w-px ${dark ? 'bg-slate-800' : 'bg-slate-200'}`} />
               {data.experience.map((e) => (
@@ -270,7 +473,7 @@ export function PortfolioSite({ data, photoData, portfolio, preview, username }:
         {/* ── Education ── */}
         {sections.education && data.education.length > 0 && (
           <section className="py-12">
-            <SectionTitle accent={accent}>Education</SectionTitle>
+            <SectionTitle accent={accent} layout={layout} dark={dark}>Education</SectionTitle>
             <div className="space-y-5">
               {data.education.map((e) => (
                 <div key={e.id} className={`flex items-start gap-4 rounded-2xl border p-5 ${card}`}>
@@ -294,10 +497,10 @@ export function PortfolioSite({ data, photoData, portfolio, preview, username }:
         {/* ── Skills ── */}
         {sections.skills && data.skills.length > 0 && (
           <section className="py-12">
-            <SectionTitle accent={accent}>Skills</SectionTitle>
-            <div className="flex flex-wrap gap-2">
+            <SectionTitle accent={accent} layout={layout} dark={dark}>Skills</SectionTitle>
+            <div className={`flex flex-wrap gap-2 ${layout === 'spotlight' ? 'justify-center' : ''}`}>
               {data.skills.map((s) => (
-                <span key={s.id} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold ${chip}`}>
+                <span key={s.id} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold ${layout === 'spotlight' ? chipSpotlight : chip}`}>
                   <Sparkles className="h-3 w-3" style={{ color: accent }} />
                   {s.name}
                 </span>
@@ -309,10 +512,10 @@ export function PortfolioSite({ data, photoData, portfolio, preview, username }:
         {/* ── Testimonials ── */}
         {sections.testimonials !== false && p.testimonials.length > 0 && (
           <section className="py-12">
-            <SectionTitle accent={accent}>Kind words</SectionTitle>
+            <SectionTitle accent={accent} layout={layout} dark={dark}>Kind words</SectionTitle>
             <div className="grid gap-5 sm:grid-cols-2">
               {p.testimonials.filter((t) => t.quote.trim()).map((t) => (
-                <blockquote key={t.id} className={`relative rounded-2xl border p-5 shadow-sm ${card}`}>
+                <blockquote key={t.id} className={`relative rounded-2xl border p-5 ${layout === 'spotlight' ? '' : 'shadow-sm'} ${card}`}>
                   <Quote className="absolute right-4 top-4 h-6 w-6 opacity-15" style={{ color: accent }} />
                   <p className={`text-sm leading-relaxed ${dark ? 'text-slate-300' : 'text-slate-700'}`}>&ldquo;{t.quote}&rdquo;</p>
                   <footer className="mt-4 flex items-center gap-3">
@@ -330,33 +533,59 @@ export function PortfolioSite({ data, photoData, portfolio, preview, username }:
           </section>
         )}
 
-        {/* ── Contact ── */}
+        {/* ── Contact — "Let's work together" card (fixed R5: the email pill
+               can never outgrow the card or collide with the phone row) ── */}
         {sections.contact && (
           <section className="py-12">
             <div
-              className="rounded-3xl px-6 py-10 text-center text-white"
-              style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)` }}
+              className="rounded-3xl px-6 py-10 text-center"
+              style={
+                layout === 'spotlight'
+                  ? dark
+                    ? { background: '#0f172a', color: '#e2e8f0', border: '1px solid #1e293b' }
+                    : { background: '#ffffff', color: '#1e293b', border: `1.5px solid ${accent}` }
+                  : { background: `linear-gradient(135deg, ${accent}, ${accent}cc)`, color: '#ffffff' }
+              }
             >
               <Briefcase className="mx-auto mb-3 h-7 w-7 opacity-80" />
               <h2 className="text-2xl font-black">Let&apos;s work together</h2>
               <p className="mt-2 text-sm opacity-80">I&apos;m open to new opportunities — drop me a line.</p>
-              {c.email && (
-                <a
-                  href={`mailto:${c.email}`}
-                  className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-bold shadow-lg transition-transform hover:-translate-y-0.5"
-                  style={{ color: accent }}
-                >
-                  <Mail className="h-4 w-4" /> {c.email}
-                </a>
-              )}
-              {c.phone && (
-                <p className="mt-3 inline-flex items-center gap-1.5 text-xs opacity-80"><Phone className="h-3 w-3" /> {c.phone}</p>
-              )}
+
+              {/* Email + phone each get their own centered row; the pill wraps
+                  long addresses instead of stretching, so it never bleeds into
+                  the phone line below (that was the old bug). */}
+              <div className="mt-6 flex flex-col items-center gap-3">
+                {c.email && (
+                  <a
+                    href={`mailto:${c.email}`}
+                    className="inline-flex max-w-full items-center justify-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold shadow-lg transition-transform hover:-translate-y-0.5"
+                    style={
+                      layout === 'spotlight'
+                        ? { background: accent, color: '#ffffff' }
+                        : { background: '#ffffff', color: accent }
+                    }
+                  >
+                    <Mail className="h-4 w-4 shrink-0" />
+                    <span className="break-all">{c.email}</span>
+                  </a>
+                )}
+                {c.phone && (
+                  <p className={`inline-flex items-center gap-1.5 text-xs opacity-80`}>
+                    <Phone className="h-3 w-3 shrink-0" /> {c.phone}
+                  </p>
+                )}
+              </div>
+
               {username && !preview && (c.email || c.phone) && (
                 <div className="mt-5">
                   <a
                     href={`/api/vcard/${username}`}
-                    className="inline-flex items-center gap-2 rounded-full bg-white/15 px-5 py-2 text-xs font-semibold text-white ring-1 ring-white/40 backdrop-blur transition-transform hover:-translate-y-0.5 hover:bg-white/25"
+                    className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-xs font-semibold ring-1 backdrop-blur transition-transform hover:-translate-y-0.5"
+                    style={
+                      layout === 'spotlight'
+                        ? { color: accent, borderColor: accent, border: `1px solid ${accent}` }
+                        : { background: 'rgba(255,255,255,.15)', color: '#ffffff', borderColor: 'rgba(255,255,255,.4)', ['--tw-ring-color' as string]: 'rgba(255,255,255,.4)' }
+                    }
                   >
                     <UserPlus className="h-3.5 w-3.5" /> Add me to contacts
                   </a>

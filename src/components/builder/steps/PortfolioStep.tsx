@@ -11,7 +11,7 @@ import { Globe, Upload, Trash2, Plus, Image as ImageIcon, Eye, ChevronUp, Chevro
 import { compressImage } from '@/lib/cv/export'
 import { toast } from 'sonner'
 import { PortfolioSite } from '@/components/share/PortfolioSite'
-import { uid } from '@/lib/cv/types'
+import { uid, PORTFOLIO_LAYOUTS } from '@/lib/cv/types'
 
 const ACCENTS = ['#4F46E5', '#0EA5E9', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#0F172A']
 
@@ -101,6 +101,51 @@ export function PortfolioStep() {
           {/* Look */}
           <div className="rounded-xl border border-slate-200 p-4 space-y-4">
             <h3 className="text-sm font-semibold text-slate-800">Look &amp; feel</h3>
+            {/* Website layout (R5) — 3 templates for the portfolio site itself */}
+            <div>
+              <Label className="text-xs font-medium text-slate-600">Website template</Label>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {PORTFOLIO_LAYOUTS.map((l) => {
+                  const active = (portfolio.layout || 'signature') === l.id
+                  return (
+                    <button
+                      key={l.id}
+                      type="button"
+                      onClick={() => patchPortfolio({ layout: l.id })}
+                      className={`rounded-xl border-2 p-2 text-left transition-all hover:-translate-y-0.5 ${active ? 'border-violet-600 bg-violet-50/50 shadow-sm' : 'border-slate-200'}`}
+                    >
+                      {/* mini mock of each layout */}
+                      <div className="mb-1.5 h-14 overflow-hidden rounded-lg border border-slate-100 bg-white">
+                        {l.id === 'signature' && (
+                          <div className="flex h-full flex-col items-center justify-center gap-1" style={{ background: 'linear-gradient(180deg, #EEF2FF20, #fff)' }}>
+                            <div className="h-4 w-4 rounded-full" style={{ background: '#4F46E5' }} />
+                            <div className="h-1.5 w-14 rounded bg-slate-300" />
+                            <div className="h-1 w-10 rounded bg-slate-200" />
+                          </div>
+                        )}
+                        {l.id === 'horizon' && (
+                          <div className="flex h-full flex-col justify-center gap-1 px-2" style={{ background: 'linear-gradient(120deg, #4F46E5, #312E81)' }}>
+                            <div className="h-1 w-8 rounded bg-white/60" />
+                            <div className="h-2 w-16 rounded bg-white" />
+                            <div className="h-1 w-12 rounded bg-white/50" />
+                          </div>
+                        )}
+                        {l.id === 'spotlight' && (
+                          <div className="flex h-full flex-col items-center justify-center gap-1 bg-white">
+                            <div className="h-2.5 w-16 rounded bg-slate-800" />
+                            <div className="h-1 w-10 rounded bg-slate-300" />
+                            <div className="mt-0.5 h-px w-12 bg-slate-200" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-xs font-semibold text-slate-800">{l.name}</div>
+                      <div className="text-[10px] leading-tight text-slate-500">{l.blurb}</div>
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="mt-1.5 text-[11px] text-slate-400">Same content, three personalities — switch any time, no re-publishing needed.</p>
+            </div>
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
                 <Button

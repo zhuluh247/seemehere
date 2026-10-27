@@ -114,7 +114,10 @@ export interface CvData {
   customSections?: CustomSection[]
 }
 
-export type TemplateId = 'classic' | 'modern' | 'minimal' | 'executive' | 'creative' | 'compact'
+// 12 templates: 6 originals + 6 premium (R5)
+export type TemplateId =
+  | 'classic' | 'modern' | 'minimal' | 'executive' | 'creative' | 'compact'
+  | 'aurora' | 'vertex' | 'editorial' | 'atlas' | 'slate' | 'lumina'
 
 export interface ThemeSpec {
   accent: string // primary accent (links, rules, highlights)
@@ -156,9 +159,18 @@ export interface GalleryItem {
   caption: string
 }
 
+export type PortfolioLayout = 'signature' | 'horizon' | 'spotlight'
+
+export const PORTFOLIO_LAYOUTS: { id: PortfolioLayout; name: string; blurb: string }[] = [
+  { id: 'signature', name: 'Signature', blurb: 'Centered hero · soft glow' },
+  { id: 'horizon', name: 'Horizon', blurb: 'Bold banner · left-aligned' },
+  { id: 'spotlight', name: 'Spotlight', blurb: 'Editorial · big type, minimal' },
+]
+
 export interface PortfolioSpec {
   enabled: boolean
   mode: 'light' | 'dark'
+  layout: PortfolioLayout // website template (R5)
   accent: string
   tagline: string // hero subtitle (defaults to job title)
   about: string // defaults to CV summary when empty
@@ -180,6 +192,7 @@ export interface PortfolioSpec {
 export const emptyPortfolio = (): PortfolioSpec => ({
   enabled: false,
   mode: 'light',
+  layout: 'signature',
   accent: '#4F46E5',
   tagline: '',
   about: '',
@@ -267,6 +280,7 @@ export function normalizePortfolio(raw: unknown): PortfolioSpec {
   return {
     enabled: !!p.enabled,
     mode: p.mode === 'dark' ? 'dark' : 'light',
+    layout: (PORTFOLIO_LAYOUTS.some((l) => l.id === p.layout) ? p.layout : 'signature') as PortfolioLayout,
     accent: typeof p.accent === 'string' ? p.accent : base.accent,
     tagline: typeof p.tagline === 'string' ? p.tagline : '',
     about: typeof p.about === 'string' ? p.about : '',

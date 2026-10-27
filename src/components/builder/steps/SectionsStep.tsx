@@ -18,6 +18,12 @@ const TEMPLATE_HINT: Record<TemplateId, string> = {
   executive: 'Executive: the intro summary stays at the top. Skills & Languages share one block and move together.',
   creative: 'Creative: fully reorderable. Certifications travel with Education.',
   compact: 'Compact: Education · Certifications · Languages share the bottom band and move together.',
+  aurora: 'Aurora: fully reorderable.',
+  vertex: 'Vertex: fully reorderable.',
+  editorial: 'Editorial: fully reorderable.',
+  atlas: 'Atlas: fully reorderable.',
+  slate: 'Slate: fully reorderable.',
+  lumina: 'Lumina: fully reorderable.',
 }
 
 /** Step · Sections & Layout — reorder core + custom sections, hide/show, and
