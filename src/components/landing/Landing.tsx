@@ -1,15 +1,28 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useCvStore } from '@/lib/cv/store'
+import { useAuthStore } from '@/lib/cv/auth-store'
 import { TEMPLATE_META } from '@/components/cv/templates'
+import { LoginModal } from '@/components/auth/LoginModal'
 import { Button } from '@/components/ui/button'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
-import { Sparkles, ScanSearch, Gauge, Palette, FileDown, Gift, ArrowRight, Check, Globe, ShieldCheck, MousePointerClick, PenLine, Rocket } from 'lucide-react'
+import { Sparkles, ScanSearch, Gauge, Palette, FileDown, Gift, ArrowRight, Check, Globe, ShieldCheck, MousePointerClick, PenLine, Rocket, Globe2, LogIn } from 'lucide-react'
 
-export function Landing({ onStart }: { onStart: () => void }) {
-  const builderStarted = useCvStore((s) => s.builderStarted)
+export function Landing() {
+  const router = useRouter()
   const hasCv = useCvStore((s) => s.cv.contact.fullName.length > 0)
+  const user = useAuthStore((s) => s.user)
+  const fetchMe = useAuthStore((s) => s.fetchMe)
+  const [loginOpen, setLoginOpen] = useState(false)
+
+  const goBuild = () => router.push('/build')
+
+  useEffect(() => {
+    void fetchMe()
+  }, [fetchMe])
 
   const features = [
     { icon: <Sparkles className="h-5 w-5" />, title: 'AI writing assistant', text: 'Weak bullet? One tap rewrites it with strong verbs and real metrics. Summary generated from your own CV — never generic.' },
@@ -17,20 +30,21 @@ export function Landing({ onStart }: { onStart: () => void }) {
     { icon: <Gauge className="h-5 w-5" />, title: 'Honest CV scoring', text: 'A 0–100 review with concrete fixes: missing dates, weak openers, thin skills. Improve before you send.' },
     { icon: <Palette className="h-5 w-5" />, title: '6 templates, every color yours', text: 'Hand-crafted layouts from ATS-safe Classic to bold Creative. Any palette — or your own hex — recolors the whole design instantly.' },
     { icon: <FileDown className="h-5 w-5" />, title: 'Exports that actually work', text: 'Text-selectable PDF (ATS-parseable), PNG for LinkedIn, editable Word, plain text, and a personal share link.' },
-    { icon: <Gift className="h-5 w-5" />, title: 'Free. Genuinely free.', text: 'No account, no credit card, no watermark on your CV, no "upgrade to download". Build, export, share — £0 forever.' },
+    { icon: <Globe2 className="h-5 w-5" />, title: 'Your own portfolio website', text: 'Flip one switch and your share link becomes a full personal site — hero, project cards with images, experience and contact. Your name is the brand, not ours.' },
+    { icon: <Gift className="h-5 w-5" />, title: 'Free. Genuinely free.', text: 'No account needed, no credit card, no watermark on your CV, no "upgrade to download". Build, export, share — £0 forever.' },
   ]
 
   const steps = [
     { icon: <MousePointerClick className="h-5 w-5" />, title: 'Pick a template', text: 'Six designs, twelve palettes, or any color you love. Change your mind anytime.' },
-    { icon: <PenLine className="h-5 w-5" />, title: 'Fill the guided steps', text: 'Ten short steps with live preview, smart examples and AI help exactly where people get stuck.' },
-    { icon: <Rocket className="h-5 w-5" />, title: 'Export & share', text: 'Download PDF/PNG/Word/TXT or publish to your personal link: seemehere…/cv/yourname.' },
+    { icon: <PenLine className="h-5 w-5" />, title: 'Fill the guided steps', text: 'Eleven short steps with live preview, smart examples and AI help exactly where people get stuck.' },
+    { icon: <Rocket className="h-5 w-5" />, title: 'Export, publish, shine', text: 'Download PDF/PNG/Word/TXT — or publish your personal link and portfolio website at seemehere…/cv/yourname.' },
   ]
 
   const faqs = [
-    { q: 'Is it really free?', a: 'Yes — every template, every color, every export, AI help included. No account, no trial, no watermark. SEEMEHERE makes money in other ways later; your CV will never be behind a paywall.' },
-    { q: 'Where is my CV data stored?', a: 'In your own browser (localStorage) — we never see your CV while you edit. Only if you publish a share page does a snapshot get stored on our server, and you control it with your claim key.' },
-    { q: 'What happens if I clear my browser data?', a: 'Your draft lives in the browser, so a wipe removes it. That is why the publish step gives you a share page + claim key — and you can always rebuild fast from the sample structure.' },
-    { q: 'What is a claim key?', a: 'Your password-free way back in. When you publish cv/yourname we generate a secret code that lets you update that page later. No account needed — the key is the account.' },
+    { q: 'Is it really free?', a: 'Yes — every template, every color, every export, the portfolio website, AI help included. No trial, no watermark. SEEMEHERE makes money in other ways later; your CV will never be behind a paywall.' },
+    { q: 'Do I need an account?', a: 'No. You can build, export and even publish completely without one. An optional free account (just a username and password — no email) saves your in-progress CVs to the cloud and lets you edit published pages anytime.' },
+    { q: 'Where is my CV data stored?', a: 'While you edit, in your own browser — we never see your CV. Signed in? Your drafts also sync to our database so you never lose work and can continue on any device. Publishing stores only the snapshot people see at your link.' },
+    { q: 'What if I forget my password?', a: 'Because there is no email, a forgotten password cannot be reset — we tell you this plainly at signup. Choose a password you will not forget. Anonymous published pages cannot be edited later either, so an account is the reliable path if you plan to update your CV.' },
     { q: 'Are the PDFs ATS-friendly?', a: 'Yes. Our PDF export uses real selectable text (not screenshots), and all templates are single-column-safe, standard-font designs that parsing software reads correctly.' },
     { q: 'Can I use a photo?', a: 'Absolutely — upload a headshot and every template places it beautifully. No photo? Your initials appear in a tasteful badge instead. Your call, per template.' },
   ]
@@ -53,9 +67,20 @@ export function Landing({ onStart }: { onStart: () => void }) {
             <a href="#how" className="hover:text-violet-700">How it works</a>
             <a href="#faq" className="hover:text-violet-700">FAQ</a>
           </nav>
-          <Button onClick={onStart} className="rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-700 hover:to-indigo-700">
-            {hasCv && builderStarted ? 'Continue my CV' : 'Create my CV — free'}
-          </Button>
+          <div className="flex items-center gap-2">
+            {user ? (
+              <Button variant="ghost" onClick={goBuild} className="rounded-full gap-1.5 text-sm font-semibold text-violet-700 hover:bg-violet-50">
+                <LogIn className="h-4 w-4" /> My CVs
+              </Button>
+            ) : (
+              <Button variant="ghost" onClick={() => setLoginOpen(true)} className="rounded-full gap-1.5 text-sm font-semibold text-violet-700 hover:bg-violet-50">
+                <LogIn className="h-4 w-4" /> Log in
+              </Button>
+            )}
+            <Button onClick={goBuild} className="rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-700 hover:to-indigo-700">
+              {hasCv ? 'Continue my CV' : 'Create my CV — free'}
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -72,10 +97,10 @@ export function Landing({ onStart }: { onStart: () => void }) {
               <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">Seen everywhere.</span>
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-slate-600 sm:text-lg">
-              Build a beautiful, ATS-proof CV in ten guided steps — with AI that fixes your weak bullet points and beats the job-ad robots. Then share it as <b>cv/yourname</b>.
+              Build a beautiful, ATS-proof CV in eleven guided steps — with AI that fixes your weak bullet points, plus an optional portfolio website. Then share it as <b>cv/yourname</b>.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Button onClick={onStart} size="lg" className="h-12 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 px-8 text-base font-semibold text-white shadow-lg shadow-violet-200 hover:from-violet-700 hover:to-indigo-700">
+              <Button onClick={goBuild} size="lg" className="h-12 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 px-8 text-base font-semibold text-white shadow-lg shadow-violet-200 hover:from-violet-700 hover:to-indigo-700">
                 Build my CV now <ArrowRight className="ml-1 h-4 w-4" />
               </Button>
               <a href="#templates" className="text-sm font-medium text-slate-500 hover:text-violet-700">see the templates ↓</a>
@@ -175,7 +200,7 @@ export function Landing({ onStart }: { onStart: () => void }) {
             <Globe className="mx-auto mb-4 h-8 w-8 text-white/80" />
             <h2 className="text-2xl font-black text-white sm:text-3xl">Ready to be seen?</h2>
             <p className="mx-auto mt-2 max-w-md text-sm text-violet-100">Build it here. Publish it anywhere. cv/yourname is waiting.</p>
-            <Button onClick={onStart} size="lg" className="mt-6 h-12 rounded-full bg-white px-8 text-base font-bold text-violet-700 hover:bg-violet-50">
+            <Button onClick={goBuild} size="lg" className="mt-6 h-12 rounded-full bg-white px-8 text-base font-bold text-violet-700 hover:bg-violet-50">
               Create my CV — free
             </Button>
           </div>
@@ -196,6 +221,8 @@ export function Landing({ onStart }: { onStart: () => void }) {
           </div>
         </div>
       </footer>
+
+      <LoginModal open={loginOpen} onOpenChange={setLoginOpen} redirectTo="/build" />
     </div>
   )
 }

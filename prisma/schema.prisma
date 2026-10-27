@@ -7,17 +7,46 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Accounts (v1.1) — optional username + password, no email ───────────────
+// Lets users save in-progress drafts to the cloud and edit published CVs.
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique // lowercase handle — same namespace as share links
+  passwordHash String // scrypt: "salt:hash" hex
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  drafts       Draft[]
+}
+
+// Cloud-saved in-progress CVs (multiple profiles per user)
+model Draft {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String   @default("My CV") // profile label, e.g. "Engineering CV"
+  templateId    String   @default("modern")
+  themeJson     String   @default("{}")
+  cvJson        String
+  photoData     String   @default("")
+  portfolioJson String   @default("{}")
+  publishedUser String   @default("") // username this draft was last published under, if any
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
 // Published CV snapshots for public share pages (cv/{username})
 // Editing data stays client-side (localStorage) — only published snapshots live here.
 model PublishedCv {
   id            String   @id @default(cuid())
   username      String   @unique // lowercase handle, e.g. "miketyson"
-  claimKeyHash  String // scrypt hash of the secret claim key
+  claimKeyHash  String   @default("") // legacy claim keys; new publishes use accounts
+  ownerUserId   String? // set when published by a logged-in user
   displayName   String
   templateId    String   @default("modern")
   themeJson     String   @default("{}") // ThemeSpec as JSON
   cvJson        String // full CV data as JSON
   photoData     String   @default("") // compressed photo dataURL
+  portfolioJson String   @default("{}") // PortfolioSpec as JSON (website mode)
   viewCount     Int      @default(0)
   publishedAt   DateTime @default(now())
   updatedAt     DateTime @updatedAt

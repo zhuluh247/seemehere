@@ -1,6 +1,6 @@
 // Production schema for Neon Postgres (used when deploying to Render).
-// Switch with:  npx prisma db push --schema prisma/schema.postgres.prisma
 // The dev schema (schema.prisma) uses SQLite for the sandbox environment.
+// New tables/columns for existing deployments: run the SQL block in README-DEPLOY.md step 4b.
 
 generator client {
   provider = "prisma-client-js"
@@ -11,18 +11,44 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Published CV snapshots for public share pages (cv/{username})
-// Editing data stays client-side (localStorage) — only published snapshots live here.
-model PublishedCv {
+// ─── Accounts (v1.1) — optional username + password, no email ───────────────
+model User {
   id           String   @id @default(cuid())
   username     String   @unique
-  claimKeyHash String
-  displayName  String
-  templateId   String   @default("modern")
-  themeJson    String   @default("{}")
-  cvJson       String
-  photoData    String   @default("")
-  viewCount    Int      @default(0)
-  publishedAt  DateTime @default(now())
+  passwordHash String
+  createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  drafts       Draft[]
+}
+
+model Draft {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String   @default("My CV")
+  templateId    String   @default("modern")
+  themeJson     String   @default("{}")
+  cvJson        String
+  photoData     String   @default("")
+  portfolioJson String   @default("{}")
+  publishedUser String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// Published CV snapshots for public share pages (cv/{username})
+model PublishedCv {
+  id            String   @id @default(cuid())
+  username      String   @unique
+  claimKeyHash  String   @default("")
+  ownerUserId   String?
+  displayName   String
+  templateId    String   @default("modern")
+  themeJson     String   @default("{}")
+  cvJson        String
+  photoData     String   @default("")
+  portfolioJson String   @default("{}")
+  viewCount     Int      @default(0)
+  publishedAt   DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }

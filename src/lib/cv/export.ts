@@ -46,7 +46,7 @@ export async function exportDocx(cv: CvData, theme: ThemeSpec, displayName: stri
   const acc = hex
   const c = cv.contact
 
-  const contactBits = [c.location, c.phone, c.email, c.linkedin, c.website].filter(Boolean)
+  const contactBits = [c.location, c.phone, c.email, c.linkedin, c.website, ...(cv.contact.links || []).map((l) => l.url)].filter(Boolean)
   const children: Paragraph[] = []
 
   children.push(
@@ -123,6 +123,22 @@ export async function exportDocx(cv: CvData, theme: ThemeSpec, displayName: stri
     }
   }
 
+  if (cv.projects && cv.projects.length) {
+    children.push(section('Projects'))
+    for (const p of cv.projects) {
+      children.push(
+        new Paragraph({
+          spacing: { before: 100, after: 20 },
+          children: [
+            new TextRun({ text: p.name, bold: true, size: 22 }),
+            new TextRun({ text: [p.tech, p.repoUrl, p.liveUrl].filter(Boolean).join('  ·  ') ? `  ·  ${[p.tech, p.repoUrl, p.liveUrl].filter(Boolean).join('  ·  ')}` : '', size: 18, color: acc }),
+          ],
+        }),
+      )
+      if (p.description) children.push(new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: p.description, size: 20 })] }))
+    }
+  }
+
   if (cv.skills.length) {
     children.push(section('Skills'))
     children.push(new Paragraph({ spacing: { after: 120 }, children: [new TextRun({ text: cv.skills.map((s) => s.name).join('  ·  '), size: 20 })] }))
@@ -185,7 +201,7 @@ export function exportTxt(cv: CvData, displayName: string): void {
 
   L.push((c.fullName || 'Your Name').toUpperCase())
   if (c.jobTitle) L.push(c.jobTitle)
-  const bits = [c.location, c.phone, c.email, c.linkedin, c.website].filter(Boolean)
+  const bits = [c.location, c.phone, c.email, c.linkedin, c.website, ...(cv.contact.links || []).map((l) => l.url)].filter(Boolean)
   if (bits.length) L.push(bits.join(' | '))
   L.push('')
 
@@ -212,6 +228,13 @@ export function exportTxt(cv: CvData, displayName: string): void {
       if (e.note) L.push(`  ${e.note}`)
     }
   }
+  if (cv.projects && cv.projects.length) {
+    sec('Projects')
+    for (const p of cv.projects) {
+      L.push(`* ${p.name}${[p.tech, p.repoUrl, p.liveUrl].filter(Boolean).length ? ` — ${[p.tech, p.repoUrl, p.liveUrl].filter(Boolean).join(' | ')}` : ''}`)
+      if (p.description) L.push(`  ${p.description}`)
+    }
+  }
   if (cv.skills.length) {
     sec('Skills')
     L.push(cv.skills.map((s) => s.name).join(' | '))
@@ -231,6 +254,11 @@ export function exportTxt(cv: CvData, displayName: string): void {
 
 // ─── Photo compression (max 480px, JPEG ~85%) ────────────────────────────────
 export async function compressPhoto(file: File): Promise<string> {
+  return compressImage(file, 480, 0.85)
+}
+
+// ─── Generic image compression (project/portfolio images, max 900px) ────────
+export async function compressImage(file: File, maxDim = 900, quality = 0.82): Promise<string> {
   const dataUrl = await new Promise<string>((resolve, reject) => {
     const fr = new FileReader()
     fr.onload = () => resolve(String(fr.result))
@@ -243,7 +271,6 @@ export async function compressPhoto(file: File): Promise<string> {
     im.onerror = reject
     im.src = dataUrl
   })
-  const maxDim = 480
   const scale = Math.min(1, maxDim / Math.max(img.width, img.height))
   const w = Math.round(img.width * scale)
   const h = Math.round(img.height * scale)
@@ -253,5 +280,5 @@ export async function compressPhoto(file: File): Promise<string> {
   const ctx = canvas.getContext('2d')
   if (!ctx) return dataUrl
   ctx.drawImage(img, 0, 0, w, h)
-  return canvas.toDataURL('image/jpeg', 0.85)
+  return canvas.toDataURL('image/jpeg', quality)
 }

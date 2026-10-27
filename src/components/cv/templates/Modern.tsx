@@ -96,6 +96,23 @@ export function Modern({ data, theme, photoData, showPhoto = true }: CvTemplateP
           </section>
         )}
 
+        {data.projects.length > 0 && (
+          <section className="md-sec2">
+            <div className="md-sec2-title">Projects</div>
+            {data.projects.map((p) => (
+              <div className="md-xp" key={p.id}>
+                <div className="md-xp-top">
+                  <div className="md-xp-role">{p.name}</div>
+                  {p.repoUrl && <div className="md-xp-date">{p.repoUrl}</div>}
+                </div>
+                {p.tech && <div className="md-xp-org">{p.tech}</div>}
+                {p.description && <p style={{ fontSize: 11.5, lineHeight: 1.5, color: 'var(--mut)', marginTop: 3 }}>{p.description}</p>}
+                {p.liveUrl && <div style={{ fontSize: 11, color: 'var(--acc)', fontWeight: 600, marginTop: 2 }}>{p.liveUrl}</div>}
+              </div>
+            ))}
+          </section>
+        )}
+
         {(data.education.length > 0 || data.certifications.length > 0) && (
           <section className="md-sec2">
             <div className="md-sec2-title">Education</div>

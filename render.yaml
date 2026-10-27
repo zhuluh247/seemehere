@@ -10,7 +10,7 @@ services:
     runtime: node
     plan: free
     region: oregon # change to frankfurt/singapore if closer to your users
-    buildCommand: npm install && npm run prisma:gen:pg && npm run build
+    buildCommand: npm install && npm run build
     startCommand: npm run start
     healthCheckPath: /api/health
     autoDeploy: true # every push to main deploys automatically

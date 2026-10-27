@@ -10,8 +10,12 @@ export const SAMPLE_CV: CvData = {
     email: 'sarah.mitchell@email.com',
     phone: '+44 7700 900123',
     location: 'London, United Kingdom',
-    website: '',
+    website: 'sarahmitchell.co.uk',
     linkedin: 'linkedin.com/in/sarahmitchell',
+    links: [
+      { id: uid(), kind: 'github', label: '', url: 'github.com/sarahmitchell' },
+      { id: uid(), kind: 'x', label: '', url: 'x.com/sarahm_writes' },
+    ],
   },
   summary:
     'Results-driven marketing leader with 8+ years of experience building growth engines for consumer brands. Proven record of scaling organic traffic, leading cross-functional teams of up to six, and managing seven-figure campaign budgets. Passionate about data-led brand storytelling.',
@@ -64,6 +68,24 @@ export const SAMPLE_CV: CvData = {
       startDate: '2012',
       endDate: '2016',
       note: 'First Class Honours · Dissertation on consumer behaviour in social commerce',
+    },
+  ],
+  projects: [
+    {
+      id: uid(),
+      name: 'GrowthLens — marketing analytics dashboard',
+      description: 'Side project: a self-serve dashboard that unifies ad, SEO and email metrics for small brands, with automated weekly insight emails.',
+      tech: 'Next.js · Postgres · Recharts',
+      repoUrl: 'github.com/sarahmitchell/growthlens',
+      liveUrl: 'growthlens.app',
+    },
+    {
+      id: uid(),
+      name: 'The Weekly Standout newsletter',
+      description: 'Wrote and grew a weekly marketing teardown newsletter from 0 to 4,200 subscribers in 14 months, averaging 46% open rate.',
+      tech: 'Copywriting · Ghost · SEO',
+      repoUrl: '',
+      liveUrl: 'thestandout.weekly',
     },
   ],
   skills: [

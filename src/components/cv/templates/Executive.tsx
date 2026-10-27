@@ -59,6 +59,22 @@ export function Executive({ data, photoData, showPhoto = true }: CvTemplateProps
         </section>
       )}
 
+      {data.projects.length > 0 && (
+        <section className="ex-sec">
+          <div className="ex-sec-title">Selected Projects</div>
+          {data.projects.map((p) => (
+            <div className="ex-xp" key={p.id}>
+              <div className="ex-date">{p.liveUrl || ''}</div>
+              <div>
+                <div className="ex-xp-role">{p.name}</div>
+                <div className="ex-xp-org">{showC([p.tech, p.repoUrl])}</div>
+                {p.description && <p style={{ fontSize: 11.5, lineHeight: 1.5, color: 'var(--mut)', marginTop: 3 }}>{p.description}</p>}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+
       {data.education.length > 0 && (
         <section className="ex-sec">
           <div className="ex-sec-title">Education</div>

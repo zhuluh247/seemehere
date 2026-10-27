@@ -68,6 +68,21 @@ export function Compact({ data, photoData, showPhoto = true }: CvTemplateProps) 
         </section>
       )}
 
+      {data.projects.length > 0 && (
+        <section className="cp-sec">
+          <div className="cp-sec-title">
+            Projects <b>◆</b>
+          </div>
+          {data.projects.map((p) => (
+            <div className="cp-kv" key={p.id} style={{ marginBottom: 6 }}>
+              <b>{[p.name, p.tech].filter(Boolean).join(' — ')}</b>
+              {p.description && <span>{p.description}</span>}
+              {(p.repoUrl || p.liveUrl) && <span style={{ color: 'var(--acc)' }}>{[p.repoUrl, p.liveUrl].filter(Boolean).join(' · ')}</span>}
+            </div>
+          ))}
+        </section>
+      )}
+
       {data.skills.length > 0 && (
         <section className="cp-sec">
           <div className="cp-sec-title">

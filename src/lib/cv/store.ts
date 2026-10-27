@@ -2,18 +2,18 @@
 
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import type { CvData, DesignSettings, PublishedInfo } from './types'
-import { emptyCv, uid } from './types'
+import type { CvData, DesignSettings, PortfolioProject, PortfolioSpec, PublishedInfo, CvLink, LinkKind } from './types'
+import { emptyCv, emptyPortfolio, normalizeCv, normalizePortfolio, uid } from './types'
 import { DEFAULT_PALETTE } from './palettes'
 import { SAMPLE_CV } from './sample'
 
 export type BuilderStep =
   | 'template' | 'contact' | 'experience' | 'education' | 'skills'
-  | 'summary' | 'extras' | 'review' | 'jobmatch' | 'export'
+  | 'summary' | 'extras' | 'portfolio' | 'review' | 'jobmatch' | 'export'
 
 export const STEP_ORDER: BuilderStep[] = [
   'template', 'contact', 'experience', 'education', 'skills',
-  'summary', 'extras', 'review', 'jobmatch', 'export',
+  'summary', 'extras', 'portfolio', 'review', 'jobmatch', 'export',
 ]
 
 export const STEP_META: Record<BuilderStep, { title: string; hint: string }> = {
@@ -23,7 +23,8 @@ export const STEP_META: Record<BuilderStep, { title: string; hint: string }> = {
   education: { title: 'Education', hint: 'Where you studied' },
   skills: { title: 'Skills', hint: 'What you are great at' },
   summary: { title: 'Professional Summary', hint: 'Your story in a few lines' },
-  extras: { title: 'Certifications & Languages', hint: 'Optional extras that add weight' },
+  extras: { title: 'Projects & Extras', hint: 'Projects, certifications, languages' },
+  portfolio: { title: 'Portfolio Website', hint: 'Turn your CV into a personal website' },
   review: { title: 'Review & Score', hint: 'How strong is your CV?' },
   jobmatch: { title: 'Job Match', hint: 'Beat the ATS robots' },
   export: { title: 'Export & Share', hint: 'Download or publish your CV' },
@@ -34,8 +35,10 @@ interface SeemehereState {
   cv: CvData
   design: DesignSettings
   photoData: string // compressed dataURL, '' = none
+  portfolio: PortfolioSpec
   publishInfo: PublishedInfo | null
   builderStarted: boolean
+  activeProfileId: string | null // cloud profile when logged in
 
   setHydrated: () => void
   setBuilderStarted: (v: boolean) => void
@@ -53,6 +56,11 @@ interface SeemehereState {
   removeEducation: (id: string) => void
   moveEducation: (id: string, dir: -1 | 1) => void
 
+  addProject: () => string
+  updateProject: (id: string, patch: Partial<CvData['projects'][number]>) => void
+  removeProject: (id: string) => void
+  moveProject: (id: string, dir: -1 | 1) => void
+
   addSkill: (name: string) => void
   removeSkill: (id: string) => void
   setSkills: (names: string[]) => void
@@ -65,9 +73,24 @@ interface SeemehereState {
   updateLanguage: (id: string, patch: Partial<CvData['languages'][number]>) => void
   removeLanguage: (id: string) => void
 
+  addLink: (kind: LinkKind) => void
+  updateLink: (id: string, patch: Partial<CvLink>) => void
+  removeLink: (id: string) => void
+
   setDesign: (patch: Partial<DesignSettings>) => void
   setPhoto: (dataUrl: string) => void
   setPublishInfo: (info: PublishedInfo | null) => void
+  setActiveProfile: (id: string | null) => void
+
+  patchPortfolio: (patch: Partial<PortfolioSpec>) => void
+  patchPortfolioSections: (patch: Partial<PortfolioSpec['sections']>) => void
+  addPortfolioProject: () => string
+  updatePortfolioProject: (id: string, patch: Partial<PortfolioProject>) => void
+  removePortfolioProject: (id: string) => void
+  movePortfolioProject: (id: string, dir: -1 | 1) => void
+
+  importCv: (cv: CvData) => void
+  hydrateFromCloud: (d: { name?: string; templateId?: string; theme?: Partial<DesignSettings['theme']>; cv: unknown; photoData?: string; portfolio?: unknown; id: string }) => void
   loadSample: () => void
   resetAll: () => void
 }
@@ -81,8 +104,10 @@ export const useCvStore = create<SeemehereState>()(
       cv: emptyCv(),
       design: { templateId: 'modern', theme: { ...DEFAULT_PALETTE.theme }, fontScale: 1, showPhoto: true },
       photoData: '',
+      portfolio: emptyPortfolio(),
       publishInfo: null,
       builderStarted: false,
+      activeProfileId: null,
 
       setHydrated: () => set({ hydrated: true }),
       setBuilderStarted: (v) => set({ builderStarted: v }),
@@ -126,6 +151,24 @@ export const useCvStore = create<SeemehereState>()(
           return { cv: { ...s.cv, education: arr } }
         }),
 
+      addProject: () => {
+        const id = uid()
+        set((s) => ({ cv: { ...s.cv, projects: [...s.cv.projects, { id, name: '', description: '', tech: '', repoUrl: '', liveUrl: '' }] } }))
+        return id
+      },
+      updateProject: (id, patch) =>
+        set((s) => ({ cv: { ...s.cv, projects: s.cv.projects.map((p) => (p.id === id ? { ...p, ...patch } : p)) } })),
+      removeProject: (id) => set((s) => ({ cv: { ...s.cv, projects: s.cv.projects.filter((p) => p.id !== id) } })),
+      moveProject: (id, dir) =>
+        set((s) => {
+          const arr = [...s.cv.projects]
+          const i = arr.findIndex((p) => p.id === id)
+          const j = i + dir
+          if (i < 0 || j < 0 || j >= arr.length) return s
+          ;[arr[i], arr[j]] = [arr[j], arr[i]]
+          return { cv: { ...s.cv, projects: arr } }
+        }),
+
       addSkill: (name) => {
         const n = name.trim()
         if (!n) return
@@ -155,24 +198,87 @@ export const useCvStore = create<SeemehereState>()(
         set((s) => ({ cv: { ...s.cv, languages: s.cv.languages.map((l) => (l.id === id ? { ...l, ...patch } : l)) } })),
       removeLanguage: (id) => set((s) => ({ cv: { ...s.cv, languages: s.cv.languages.filter((l) => l.id !== id) } })),
 
+      addLink: (kind) =>
+        set((s) => {
+          if (s.cv.contact.links.some((l) => l.kind === kind && kind !== 'custom')) return s
+          return { cv: { ...s.cv, contact: { ...s.cv.contact, links: [...s.cv.contact.links, { id: uid(), kind, label: '', url: '' }] } } }
+        }),
+      updateLink: (id, patch) =>
+        set((s) => ({ cv: { ...s.cv, contact: { ...s.cv.contact, links: s.cv.contact.links.map((l) => (l.id === id ? { ...l, ...patch } : l)) } } })),
+      removeLink: (id) =>
+        set((s) => ({ cv: { ...s.cv, contact: { ...s.cv.contact, links: s.cv.contact.links.filter((l) => l.id !== id) } } })),
+
       setDesign: (patch) => set((s) => ({ design: { ...s.design, ...patch } })),
       setPhoto: (dataUrl) => set({ photoData: dataUrl }),
       setPublishInfo: (info) => set({ publishInfo: info }),
+      setActiveProfile: (id) => set({ activeProfileId: id }),
 
+      patchPortfolio: (patch) => set((s) => ({ portfolio: { ...s.portfolio, ...patch } })),
+      patchPortfolioSections: (patch) => set((s) => ({ portfolio: { ...s.portfolio, sections: { ...s.portfolio.sections, ...patch } } })),
+      addPortfolioProject: () => {
+        const id = uid()
+        set((s) => ({
+          portfolio: {
+            ...s.portfolio,
+            enabled: true,
+            projects: [...s.portfolio.projects, { id, title: '', description: '', image: '', url: '', repoUrl: '', tags: '' }],
+          },
+        }))
+        return id
+      },
+      updatePortfolioProject: (id, patch) =>
+        set((s) => ({ portfolio: { ...s.portfolio, projects: s.portfolio.projects.map((p) => (p.id === id ? { ...p, ...patch } : p)) } })),
+      removePortfolioProject: (id) =>
+        set((s) => ({ portfolio: { ...s.portfolio, projects: s.portfolio.projects.filter((p) => p.id !== id) } })),
+      movePortfolioProject: (id, dir) =>
+        set((s) => {
+          const arr = [...s.portfolio.projects]
+          const i = arr.findIndex((p) => p.id === id)
+          const j = i + dir
+          if (i < 0 || j < 0 || j >= arr.length) return s
+          ;[arr[i], arr[j]] = [arr[j], arr[i]]
+          return { portfolio: { ...s.portfolio, projects: arr } }
+        }),
+
+      importCv: (cv) => set({ cv: normalizeCv(cv), builderStarted: true }),
+      hydrateFromCloud: (d) =>
+        set((s) => ({
+          cv: normalizeCv(d.cv),
+          design: {
+            templateId: (d.templateId as DesignSettings['templateId']) || s.design.templateId,
+            theme: { ...s.design.theme, ...(d.theme || {}) },
+            fontScale: s.design.fontScale,
+            showPhoto: s.design.showPhoto,
+          },
+          photoData: d.photoData || '',
+          portfolio: normalizePortfolio(d.portfolio),
+          activeProfileId: d.id,
+          builderStarted: true,
+        })),
       loadSample: () => set({ cv: JSON.parse(JSON.stringify(SAMPLE_CV)) }),
       resetAll: () =>
         set({
           cv: emptyCv(),
           design: { templateId: 'modern', theme: { ...DEFAULT_PALETTE.theme }, fontScale: 1, showPhoto: true },
           photoData: '',
+          portfolio: emptyPortfolio(),
           publishInfo: null,
           builderStarted: false,
         }),
     }),
     {
       name: 'seemehere-cv-v1',
+      version: 2,
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({ cv: s.cv, design: s.design, photoData: s.photoData, publishInfo: s.publishInfo, builderStarted: s.builderStarted }),
+      partialize: (s) => ({ cv: s.cv, design: s.design, photoData: s.photoData, portfolio: s.portfolio, publishInfo: s.publishInfo, builderStarted: s.builderStarted, activeProfileId: s.activeProfileId }),
+      migrate: (persisted: unknown) => {
+        const p = (persisted || {}) as Record<string, unknown>
+        return {
+          ...p,
+          cv: normalizeCv(p.cv),
+          portfolio: normalizePortfolio(p.portfolio ?? p.portfolioJson),
+        }
+      },
       onRehydrateStorage: () => (state) => state?.setHydrated(),
     },
   ),
@@ -181,5 +287,5 @@ export const useCvStore = create<SeemehereState>()(
 // Convenience getter used by exports/publish
 export const getCvSnapshot = () => {
   const s = useCvStore.getState()
-  return { cv: s.cv, design: s.design, photoData: s.photoData, displayName: s.cv.contact.fullName || 'My CV' }
+  return { cv: s.cv, design: s.design, photoData: s.photoData, portfolio: s.portfolio, displayName: s.cv.contact.fullName || 'My CV' }
 }

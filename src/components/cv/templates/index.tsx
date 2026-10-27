@@ -3,6 +3,7 @@
 import type { TemplateId } from '@/lib/cv/types'
 import type { CvTemplateProps } from './shared'
 import { themeVars } from './shared'
+import { DEFAULT_PALETTE } from '@/lib/cv/palettes'
 import { Classic } from './Classic'
 import { Modern } from './Modern'
 import { Minimal } from './Minimal'
@@ -26,6 +27,7 @@ interface CvDocumentProps extends CvTemplateProps {
 
 /** Renders the chosen template inside the A4 page with themed CSS variables */
 export function CvDocument({ templateId, theme, ...rest }: CvDocumentProps) {
+  const t = theme ?? DEFAULT_PALETTE.theme
   const inner = (() => {
     switch (templateId) {
       case 'classic':
@@ -46,7 +48,7 @@ export function CvDocument({ templateId, theme, ...rest }: CvDocumentProps) {
   })()
 
   return (
-    <div style={themeVars(theme)} className="cv-theme-root">
+    <div style={themeVars(t)} className="cv-theme-root">
       {inner}
     </div>
   )

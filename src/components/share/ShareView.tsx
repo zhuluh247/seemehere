@@ -1,13 +1,26 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
-import type { CvData, TemplateId, ThemeSpec } from '@/lib/cv/types'
+import type { CvData, PortfolioSpec, TemplateId, ThemeSpec } from '@/lib/cv/types'
+import { normalizePortfolio } from '@/lib/cv/types'
 import { DEFAULT_PALETTE } from '@/lib/cv/palettes'
 import { CvPageA4, TEMPLATE_META } from '@/components/cv/templates'
+import { PortfolioSite } from './PortfolioSite'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Globe, ArrowRight, EyeOff } from 'lucide-react'
+import { Globe, ArrowRight } from 'lucide-react'
+
+const subscribeNoop = () => () => {}
+
+/** Hydration-safe read of ?mode=cv (force the paper CV even when portfolio is on) */
+function useForceCvMode(): boolean {
+  return useSyncExternalStore(
+    subscribeNoop,
+    () => new URLSearchParams(window.location.search).get('mode') === 'cv',
+    () => false,
+  )
+}
 
 interface PublishedCv {
   username: string
@@ -16,15 +29,17 @@ interface PublishedCv {
   theme: Partial<ThemeSpec>
   cv: CvData
   photoData: string
+  portfolio: Partial<PortfolioSpec>
   updatedAt: string
 }
 
-/** Public read-only CV page for a published username */
+/** Public page for a published username — website (portfolio) or classic paper CV */
 export function ShareView({ username }: { username: string }) {
   const [data, setData] = useState<PublishedCv | null>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'notfound'>('loading')
   const wrapRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
+  const forceCv = useForceCvMode()
 
   useEffect(() => {
     let alive = true
@@ -52,19 +67,28 @@ export function ShareView({ username }: { username: string }) {
   }, [state])
 
   const theme: ThemeSpec = { ...DEFAULT_PALETTE.theme, ...(data?.theme || {}) }
+  const pf = data ? normalizePortfolio(data.portfolio) : null
+  const showPortfolio = !!pf?.enabled && !forceCv
+
+  if (state === 'ready' && data && showPortfolio) {
+    // Website mode — no app chrome at all, tiny footer credit inside the site
+    return <PortfolioSite data={data.cv} photoData={data.photoData} portfolio={data.portfolio} username={data.username} />
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-200">
-      {/* Slim bar */}
+      {/* Slim bar (classic CV view only) */}
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex h-12 max-w-4xl items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 text-xs font-black text-white">S</span>
             <span className="text-sm font-extrabold tracking-tight text-slate-800">SEEMEHERE</span>
           </Link>
-          <div className="flex items-center gap-2 text-[11px] text-slate-400">
-            <EyeOff className="h-3.5 w-3.5" /> unlisted page
-          </div>
+          {showPortfolio === false && pf?.enabled && (
+            <Link href={typeof window !== 'undefined' ? window.location.pathname : '#'} className="text-[11px] font-semibold text-violet-600 hover:underline">
+              View website →
+            </Link>
+          )}
         </div>
       </header>
 

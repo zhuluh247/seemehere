@@ -79,6 +79,19 @@ export function Creative({ data, photoData, showPhoto = true }: CvTemplateProps)
           </section>
         )}
 
+        {data.projects.length > 0 && (
+          <section className="cr-sec">
+            <div className="cr-sec-title">Projects</div>
+            {data.projects.map((p) => (
+              <div className="cr-kv" key={p.id} style={{ marginBottom: 8 }}>
+                <b>{p.name}</b>
+                <span>{[p.tech, p.repoUrl, p.liveUrl].filter(Boolean).join(' · ')}</span>
+                {p.description && <span style={{ color: 'var(--mut)' }}>{p.description}</span>}
+              </div>
+            ))}
+          </section>
+        )}
+
         {(data.education.length > 0 || data.certifications.length > 0) && (
           <section className="cr-sec">
             <div className="cr-sec-title">Education &amp; Certifications</div>

@@ -2,36 +2,35 @@ import { NextRequest, NextResponse } from 'next/server'
 import { randomBytes, scryptSync, timingSafeEqual } from 'crypto'
 import { db } from '@/lib/db'
 import { validateUsername } from '@/lib/cv/username'
+import { sessionUser } from '@/lib/auth'
+import { rateLimited, clientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
 // ─── Light in-memory rate limit (per IP): 8 publishes / hour ────────────────
-const hits = new Map<string, number[]>()
-function rateLimited(ip: string, max: number, windowMs: number): boolean {
-  const now = Date.now()
-  const arr = (hits.get(ip) || []).filter((t) => now - t < windowMs)
-  if (arr.length >= max) return true
-  arr.push(now)
-  hits.set(ip, arr)
-  return false
+
+interface PublishBody {
+  username?: string
+  claimKey?: string // legacy — accepted to update pre-v1.1 anonymous pages
+  displayName?: string
+  templateId?: string
+  theme?: Record<string, string>
+  cv?: unknown
+  photoData?: string
+  portfolio?: unknown
 }
 
-const KEY_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
-function generateClaimKey(): string {
-  const seg = (n: number) =>
-    Array.from(randomBytes(n))
-      .map((b) => KEY_ALPHABET[b % KEY_ALPHABET.length])
-      .join('')
-  return `SEEM-${seg(5)}-${seg(5)}`
-}
+const MAX_PHOTO_CHARS = 400_000
+const MAX_CV_CHARS = 300_000
+const MAX_PORTFOLIO_CHARS = 1_500_000
 
-function hashClaimKey(key: string): string {
+function hashLegacyClaimKey(key: string): string {
   const salt = randomBytes(16)
   const hash = scryptSync(key, salt, 32)
   return `${salt.toString('hex')}:${hash.toString('hex')}`
 }
 
-function verifyClaimKey(key: string, stored: string): boolean {
+function verifyLegacyClaimKey(key: string, stored: string): boolean {
   try {
     const [saltHex, hashHex] = stored.split(':')
     if (!saltHex || !hashHex) return false
@@ -42,22 +41,9 @@ function verifyClaimKey(key: string, stored: string): boolean {
   }
 }
 
-interface PublishBody {
-  username?: string
-  claimKey?: string // required to UPDATE an existing username
-  displayName?: string
-  templateId?: string
-  theme?: Record<string, string>
-  cv?: unknown
-  photoData?: string
-}
-
-const MAX_PHOTO_CHARS = 400_000 // ~300KB of base64 — photos are compressed client-side
-const MAX_CV_CHARS = 300_000
-
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get('x-forwarded-for') || 'local'
-  if (rateLimited(ip, 8, 60 * 60 * 1000)) {
+  const ip = clientIp(req)
+  if (rateLimited(`publish:${ip}`, 8, 60 * 60 * 1000)) {
     return NextResponse.json({ error: 'Too many publishes — try again in a bit' }, { status: 429 })
   }
 
@@ -70,21 +56,24 @@ export async function POST(req: NextRequest) {
 
   const check = validateUsername(body.username || '')
   if (!check.ok) return NextResponse.json({ error: check.reason }, { status: 400 })
-
   const username = check.username
+
+  const user = await sessionUser(req)
   const existing = await db.publishedCv.findUnique({ where: { username } })
 
   if (existing) {
-    if (!body.claimKey) {
+    if (user && existing.ownerUserId === user.id) {
+      // owner republishing — allowed
+    } else if (body.claimKey && existing.claimKeyHash && verifyLegacyClaimKey(body.claimKey, existing.claimKeyHash)) {
+      // legacy claim-key update (pre-v1.1 pages) — still honoured
+    } else {
       return NextResponse.json({ error: `"${username}" is already taken`, code: 'username_taken' }, { status: 409 })
-    }
-    if (!verifyClaimKey(body.claimKey, existing.claimKeyHash)) {
-      return NextResponse.json({ error: 'Wrong claim key for this username', code: 'bad_claim_key' }, { status: 403 })
     }
   }
 
   const cvJson = JSON.stringify(body.cv ?? {})
   if (cvJson.length > MAX_CV_CHARS) return NextResponse.json({ error: 'CV data too large' }, { status: 413 })
+  const portfolioJson = JSON.stringify(body.portfolio ?? {}).slice(0, MAX_PORTFOLIO_CHARS)
   const photoData = (body.photoData || '').slice(0, MAX_PHOTO_CHARS)
 
   const data = {
@@ -93,6 +82,8 @@ export async function POST(req: NextRequest) {
     themeJson: JSON.stringify(body.theme || {}),
     cvJson,
     photoData,
+    portfolioJson,
+    ...(user ? { ownerUserId: user.id } : {}),
   }
 
   if (existing) {
@@ -100,10 +91,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ username, updated: true, url: `/cv/${username}` })
   }
 
-  const claimKey = generateClaimKey()
+  // New publish: claim keys are retired — anonymous pages get an unusable placeholder hash
   await db.publishedCv.create({
-    data: { username, claimKeyHash: hashClaimKey(claimKey), ...data },
+    data: { username, claimKeyHash: hashLegacyClaimKey(`orphan:${username}:${Date.now()}`), ...data },
   })
 
-  return NextResponse.json({ username, claimKey, updated: false, url: `/cv/${username}` })
+  return NextResponse.json({ username, updated: false, url: `/cv/${username}` })
 }

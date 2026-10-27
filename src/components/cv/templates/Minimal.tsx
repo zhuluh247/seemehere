@@ -82,6 +82,22 @@ export function Minimal({ data, photoData, showPhoto = true }: CvTemplateProps) 
         </section>
       )}
 
+      {data.projects.length > 0 && (
+        <section className="mn-sec">
+          <div className="mn-sec-title">Projects</div>
+          {data.projects.map((p) => (
+            <div className="mn-xp" key={p.id}>
+              <div className="mn-date">{p.liveUrl || p.repoUrl || '—'}</div>
+              <div>
+                <div className="mn-xp-role">{p.name}</div>
+                {p.tech && <div className="mn-xp-org">{p.tech}</div>}
+                {p.description && <p style={{ fontSize: 11, lineHeight: 1.45, color: 'var(--mut)', marginTop: 2 }}>{p.description}</p>}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+
       {(data.education.length > 0 || data.certifications.length > 0 || data.languages.length > 0) && (
         <section className="mn-sec">
           <div className="mn-sec-title">Education · Certifications · Languages</div>

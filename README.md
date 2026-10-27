@@ -1,7 +1,9 @@
 # SEEMEHERE — Free CV Builder
 
-Build a beautiful, ATS-friendly CV in your browser. No sign-up, no paywall, no watermarks.
-Live editing autosaves to your browser; published CVs get a clean share link at `/cv/yourname`.
+Build a beautiful, ATS-friendly CV in your browser. No sign-up required, no paywall, no watermarks.
+Editing autosaves locally; sign in (optional, username + password — no email) to sync drafts to the
+cloud, and publish to a personal link at `/cv/yourname` — or flip one switch and that link becomes
+a full **portfolio website**.
 
 ![templates](public/templates/1-classic.png)
 
@@ -10,13 +12,20 @@ Live editing autosaves to your browser; published CVs get a clean share link at 
 - **6 professional templates** — Classic, Modern, Minimal, Executive, Creative, Compact
 - **Every color editable** — 12 curated palettes + custom hex, with live preview
 - **Headshot support** — or a tasteful initials badge when there's no photo
+- **Projects & links** — GitHub, X, Instagram, YouTube, Dribbble, Behance and more (all optional);
+  every project carries its repo and live-demo links
+- **Portfolio website** — your share link becomes a personal website: hero, about, project cards
+  with images, experience timeline, skills, contact. Light/dark, any accent, zero SEEMEHERE branding
+  (a tiny footer credit is the only trace)
+- **Optional accounts** — username + password, no email; cloud-synced CV profiles, edit published
+  pages anytime. Anonymous publishing still works with zero friction
 - **One-click fit-to-one-page** — content auto-scales, no manual squeezing
-- **Exports** — PDF (text-selectable, ATS-safe), PNG, Word (.docx), TXT
-- **Share links** — claim `cv/yourname`, get a secret Claim Key to edit later (no accounts)
+- **Imports** — upload an old CV PDF and AI fills every step for you
+- **Exports** — PDF (text-selectable, ATS-safe), PNG, Word (.docx), TXT, QR code for your link
 - **AI assist (optional)** — bullet polish, summary writer, skill suggestions, CV score, light ATS check
-  - runs on the free Google Gemini tier; AI buttons simply hide if no key is configured
-- **Private by design** — editing data lives in the user's browser (localStorage);
-  only published snapshots touch the server (one small Postgres table)
+  - free Google Gemini tier; AI buttons simply hide if no key is configured; per-IP rate limits
+- **Private by design** — editing data lives in the user's browser until they sign in or publish;
+  only published snapshots and opted-in drafts touch the server
 
 ## Tech stack
 
@@ -35,6 +44,6 @@ npm run dev         # http://localhost:3000
 
 GitHub → Render (free web service) → Neon (free Postgres) → cron-job.org (free keep-alive pinger).
 
-Full step-by-step checklist: **[README-DEPLOY.md](README-DEPLOY.md)**
+Full step-by-step checklist (including the database SQL): **[README-DEPLOY.md](README-DEPLOY.md)**
 
 Every later update is just `git push` — Render auto-deploys.

@@ -51,6 +51,24 @@ export function Classic({ data, photoData, showPhoto = true }: CvTemplateProps) 
         </section>
       )}
 
+      {data.projects.length > 0 && (
+        <section className="cl-sec">
+          <div className="cl-sec-title">Projects</div>
+          {data.projects.map((p) => (
+            <div className="cl-entry" key={p.id}>
+              <div className="cl-top">
+                <div>
+                  <div className="cl-role2">{p.name}</div>
+                  <div className="cl-org">{showC([p.tech, p.repoUrl])}</div>
+                </div>
+                {p.liveUrl && <div className="cl-date">{p.liveUrl}</div>}
+              </div>
+              {p.description && <p className="cl-note">{p.description}</p>}
+            </div>
+          ))}
+        </section>
+      )}
+
       {data.education.length > 0 && (
         <section className="cl-sec">
           <div className="cl-sec-title">Education</div>

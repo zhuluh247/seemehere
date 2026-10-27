@@ -7,9 +7,10 @@ import { TEMPLATE_META } from '@/components/cv/templates'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { Check, Wand2, RotateCcw } from 'lucide-react'
+import { Check, Wand2, RotateCcw, FileUp } from 'lucide-react'
 import { toast } from 'sonner'
 import { useState } from 'react'
+import { ImportDialog } from './ImportDialog'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -22,6 +23,7 @@ export function TemplateStep() {
   const resetAll = useCvStore((s) => s.resetAll)
   const cv = useCvStore((s) => s.cv)
   const [customHex, setCustomHex] = useState(design.theme.accent)
+  const [importOpen, setImportOpen] = useState(false)
 
   const applyCustom = (hex: string) => {
     const m = /^#[0-9a-fA-F]{6}$/.test(hex)
@@ -150,6 +152,19 @@ export function TemplateStep() {
         </div>
         <Switch id="show-photo" checked={design.showPhoto} onCheckedChange={(v) => setDesign({ showPhoto: v })} />
       </div>
+
+      {/* Import from PDF */}
+      <div className="flex items-center justify-between rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 to-indigo-50 p-3">
+        <div>
+          <Label className="text-sm font-medium text-slate-800">Have an old CV?</Label>
+          <p className="text-[11px] text-slate-500">Upload the PDF — AI fills every step for you, then you polish.</p>
+        </div>
+        <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 text-xs border-violet-300 bg-white" onClick={() => setImportOpen(true)}>
+          <FileUp className="h-3.5 w-3.5 text-violet-600" /> Import from PDF
+        </Button>
+      </div>
+
+      <ImportDialog open={importOpen} onOpenChange={setImportOpen} />
     </div>
   )
 }

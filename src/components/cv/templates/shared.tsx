@@ -1,13 +1,13 @@
 'use client'
 
 import type { CSSProperties } from 'react'
-import { Mail, Phone, MapPin, Link2, Linkedin } from 'lucide-react'
+import { Mail, Phone, MapPin, Link2, Linkedin, Github, Twitter, Instagram, Youtube, Dribbble, Music2, Palette, Layers, BookOpen } from 'lucide-react'
 import type { CvData, ThemeSpec } from '@/lib/cv/types'
 import { softTint, lighten } from '@/lib/cv/color'
 
 export interface CvTemplateProps {
   data: CvData
-  theme: ThemeSpec
+  theme?: ThemeSpec
   photoData?: string
   showPhoto?: boolean
 }
@@ -58,6 +58,16 @@ export const CIcon = {
   pin: (cls?: string) => <MapPin className={cls} strokeWidth={2} />,
   web: (cls?: string) => <Link2 className={cls} strokeWidth={2} />,
   li: (cls?: string) => <Linkedin className={cls} strokeWidth={2} />,
+  github: (cls?: string) => <Github className={cls} strokeWidth={2} />,
+  x: (cls?: string) => <Twitter className={cls} strokeWidth={2} />,
+  instagram: (cls?: string) => <Instagram className={cls} strokeWidth={2} />,
+  youtube: (cls?: string) => <Youtube className={cls} strokeWidth={2} />,
+  tiktok: (cls?: string) => <Music2 className={cls} strokeWidth={2} />,
+  dribbble: (cls?: string) => <Dribbble className={cls} strokeWidth={2} />,
+  behance: (cls?: string) => <Palette className={cls} strokeWidth={2} />,
+  stackoverflow: (cls?: string) => <Layers className={cls} strokeWidth={2} />,
+  medium: (cls?: string) => <BookOpen className={cls} strokeWidth={2} />,
+  custom: (cls?: string) => <Link2 className={cls} strokeWidth={2} />,
 }
 
 export interface ContactLine {
@@ -73,6 +83,11 @@ export function contactLines(data: CvData): ContactLine[] {
   if (c.location) out.push({ icon: 'pin', text: c.location })
   if (c.website) out.push({ icon: 'web', text: c.website })
   if (c.linkedin) out.push({ icon: 'li', text: c.linkedin })
+  for (const l of (c.links || []) as { id: string; kind: string; label: string; url: string }[]) {
+    if (!l.url) continue
+    const icon = (l.kind in CIcon ? l.kind : 'custom') as keyof typeof CIcon
+    out.push({ icon, text: l.label ? `${l.label}: ${l.url}` : l.url })
+  }
   return out
 }
 

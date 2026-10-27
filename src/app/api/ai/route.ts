@@ -1,21 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { activeProvider, runAi, runAiJson, HttpError } from '@/lib/ai/provider'
+import { rateLimited, clientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-// ─── Light in-memory rate limit (per IP): 30 AI calls / minute ──────────────
-const hits = new Map<string, number[]>()
-function rateLimited(ip: string): boolean {
-  const now = Date.now()
-  const arr = (hits.get(ip) || []).filter((t) => now - t < 60_000)
-  if (arr.length >= 30) return true
-  arr.push(now)
-  hits.set(ip, arr)
-  return false
+// ─── Rate limits (per IP): 30 AI calls / minute AND 100 / hour ──────────────
+
+function aiRateLimited(ip: string): boolean {
+  return rateLimited(`ai-min:${ip}`, 30, 60_000) || rateLimited(`ai-hour:${ip}`, 100, 60 * 60 * 1000)
 }
 
-type Task = 'polish' | 'summary' | 'skills' | 'score' | 'ats-match'
+type Task = 'polish' | 'summary' | 'skills' | 'score' | 'ats-match' | 'parse-cv'
 
 const CV_JSON_NOTE = `The CV is provided as JSON with fields: contact {fullName, jobTitle, email, phone, location, website, linkedin}, summary, experience[] {role, company, location, startDate, endDate, bullets[]}, education[], skills[], certifications[], languages[].`
 
@@ -24,8 +20,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'AI is not configured on this deployment' }, { status: 501 })
   }
 
-  const ip = req.headers.get('x-forwarded-for') || 'local'
-  if (rateLimited(ip)) return NextResponse.json({ error: 'Slow down a moment and try again' }, { status: 429 })
+  const ip = clientIp(req)
+  if (aiRateLimited(ip)) return NextResponse.json({ error: 'Slow down a moment and try again' }, { status: 429 })
 
   let body: { task?: Task; payload?: Record<string, unknown> }
   try {
@@ -95,6 +91,18 @@ export async function POST(req: NextRequest) {
             tips: (json.tips || []).slice(0, 4).map(String),
           },
         })
+      }
+
+      case 'parse-cv': {
+        const text = String(p.text || '').slice(0, 15000)
+        if (text.trim().length < 40) return NextResponse.json({ error: 'There is not enough text in that CV to import' }, { status: 400 })
+        const json = await runAiJson<Record<string, unknown>>(
+          `You are a CV data extraction engine. Extract the candidate's CV from the raw text below into STRICT JSON with exactly this shape:
+{"contact":{"fullName":"","jobTitle":"","email":"","phone":"","location":"","website":"","linkedin":"","links":[]},"summary":"","experience":[{"id":"1","role":"","company":"","location":"","startDate":"","endDate":"","bullets":[""]}],"education":[{"id":"1","degree":"","school":"","location":"","startDate":"","endDate":"","note":""}],"projects":[{"id":"1","name":"","description":"","tech":"","repoUrl":"","liveUrl":""}],"skills":[{"id":"1","name":""}],"certifications":[{"id":"1","name":"","issuer":"","year":""}],"languages":[{"id":"1","name":"","level":"Fluent"}]}
+Rules: use "" for anything not present; keep every id a short string; bullets = the achievement lines (no dashes); dates stay free-text like "Mar 2021" or "2021"; language level must be one of Native/Fluent/Professional/Conversational/Basic; never invent experience. linkedin/website = bare domains like linkedin.com/in/name when present.`,
+          text,
+        )
+        return NextResponse.json({ result: json })
       }
 
       default:
