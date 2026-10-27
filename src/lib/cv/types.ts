@@ -84,6 +84,21 @@ export interface CertItem {
   year: string
 }
 
+// ─── Custom sections (R3) — user-defined sections like "Volunteering" ──────
+
+export interface CustomSectionItem {
+  id: string
+  title: string // entry heading, e.g. "Camp Coordinator"
+  subtitle: string // optional context line, e.g. "Red Cross · 2023"
+  body: string // free text; newlines are preserved when rendered
+}
+
+export interface CustomSection {
+  id: string
+  name: string // section title, e.g. "Volunteering"
+  items: CustomSectionItem[]
+}
+
 export interface CvData {
   contact: Contact
   summary: string
@@ -93,6 +108,10 @@ export interface CvData {
   skills: SkillItem[]
   certifications: CertItem[]
   languages: LanguageItem[]
+  // Layout (R3) — all optional so older saved CVs / cloud drafts stay valid:
+  sectionOrder?: string[] // desired order of core section keys + custom section ids
+  hiddenSections?: string[] // keys hidden from the rendered CV
+  customSections?: CustomSection[]
 }
 
 export type TemplateId = 'classic' | 'modern' | 'minimal' | 'executive' | 'creative' | 'compact'
@@ -190,6 +209,9 @@ export const emptyCv = (): CvData => ({
   skills: [],
   certifications: [],
   languages: [],
+  sectionOrder: [],
+  hiddenSections: [],
+  customSections: [],
 })
 
 /** Upgrade older saved CVs (pre-projects / pre-links) so old browsers don't break */
@@ -208,6 +230,32 @@ export function normalizeCv(raw: unknown): CvData {
     skills: Array.isArray(cv.skills) ? cv.skills : [],
     certifications: Array.isArray(cv.certifications) ? cv.certifications : [],
     languages: Array.isArray(cv.languages) ? cv.languages : [],
+    sectionOrder: Array.isArray(cv.sectionOrder)
+      ? cv.sectionOrder.filter((k): k is string => typeof k === 'string')
+      : [],
+    hiddenSections: Array.isArray(cv.hiddenSections)
+      ? cv.hiddenSections.filter((k): k is string => typeof k === 'string')
+      : [],
+    customSections: Array.isArray(cv.customSections)
+      ? cv.customSections.map((raw) => {
+          const cs = (raw || {}) as Partial<CustomSection>
+          return {
+            id: typeof cs.id === 'string' && cs.id ? cs.id : uid(),
+            name: typeof cs.name === 'string' ? cs.name : '',
+            items: Array.isArray(cs.items)
+              ? cs.items.map((rawIt) => {
+                  const it = (rawIt || {}) as Partial<CustomSectionItem>
+                  return {
+                    id: typeof it.id === 'string' && it.id ? it.id : uid(),
+                    title: typeof it.title === 'string' ? it.title : '',
+                    subtitle: typeof it.subtitle === 'string' ? it.subtitle : '',
+                    body: typeof it.body === 'string' ? it.body : '',
+                  }
+                })
+              : [],
+          }
+        })
+      : [],
   }
 }
 

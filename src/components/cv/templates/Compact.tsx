@@ -1,45 +1,55 @@
 'use client'
 
+import { Fragment } from 'react'
+import type { ReactNode } from 'react'
 import { CvPhoto, CIcon, contactLines, dateRange } from './shared'
 import type { CvTemplateProps } from './shared'
+import type { CustomSection } from '@/lib/cv/types'
+import { effectiveSectionOrder, isSectionHidden } from '@/lib/cv/sections'
 
-/** Template 6 · Compact — dense layout, fits the most on one page */
+/** Template 6 · Compact — dense layout, fits the most on one page.
+ *  Profile / Experience / Projects / Skills follow the user's chosen order;
+ *  the bottom band fuses Education · Certifications · Languages (each column
+ *  respects its own hide flag). The header tagline (first sentence of the
+ *  summary) disappears when the summary section is hidden.
+ *  Custom sections use Compact's kv styling. */
 export function Compact({ data, photoData, showPhoto = true }: CvTemplateProps) {
   const c = data.contact
   const contacts = contactLines(data)
-  const headlineBits = [data.summary ? data.summary.split('. ')[0] + '.' : '', ''].filter(Boolean)
+  const hidden = (key: string) => isSectionHidden(data, key)
+  const summaryVisible = !hidden('summary') && !!data.summary
+  const headlineBits = [summaryVisible ? data.summary.split('. ')[0] + '.' : '', ''].filter(Boolean)
 
-  return (
-    <div className="cv-page tpl-compact">
-      <header className="cp-hdr">
-        {showPhoto && <CvPhoto photoData={photoData} name={c.fullName} className="cp-photo" />}
-        <div className="cp-mid">
-          <h1 className="cp-name">{c.fullName || 'Your Name'}</h1>
-          {c.jobTitle && <div className="cp-role">{c.jobTitle}</div>}
-          {headlineBits[0] && <p className="cp-tag">{headlineBits[0]}</p>}
+  const renderCustom = (sec: CustomSection) => {
+    if (sec.items.length === 0) return null
+    return (
+      <section className="cp-sec">
+        <div className="cp-sec-title">
+          {(sec.name || 'Additional').toUpperCase()} <b>◆</b>
         </div>
-        {contacts.length > 0 && (
-          <div className="cp-contact">
-            {contacts.map((line, i) => (
-              <span key={i} style={{ display: 'contents' }}>
-                {CIcon[line.icon]('')}
-                <span>{line.text}</span>
-              </span>
-            ))}
+        {sec.items.map((it) => (
+          <div className="cp-kv" key={it.id} style={{ marginBottom: 6 }}>
+            {it.title && <b>{it.title}</b>}
+            {it.subtitle && <span>{it.subtitle}</span>}
+            {it.body && <span style={{ whiteSpace: 'pre-line' }}>{it.body}</span>}
           </div>
-        )}
-      </header>
+        ))}
+      </section>
+    )
+  }
 
-      {data.summary && (
+  const blocks: Record<string, () => ReactNode> = {
+    summary: () =>
+      summaryVisible ? (
         <section className="cp-sec">
           <div className="cp-sec-title">
             Profile <b>◆</b>
           </div>
           <p className="cp-sum">{data.summary}</p>
         </section>
-      )}
-
-      {data.experience.length > 0 && (
+      ) : null,
+    experience: () =>
+      !hidden('experience') && data.experience.length > 0 ? (
         <section className="cp-sec">
           <div className="cp-sec-title">
             Experience <b>◆</b>
@@ -66,9 +76,9 @@ export function Compact({ data, photoData, showPhoto = true }: CvTemplateProps) 
             </div>
           ))}
         </section>
-      )}
-
-      {data.projects.length > 0 && (
+      ) : null,
+    projects: () =>
+      !hidden('projects') && data.projects.length > 0 ? (
         <section className="cp-sec">
           <div className="cp-sec-title">
             Projects <b>◆</b>
@@ -81,9 +91,9 @@ export function Compact({ data, photoData, showPhoto = true }: CvTemplateProps) 
             </div>
           ))}
         </section>
-      )}
-
-      {data.skills.length > 0 && (
+      ) : null,
+    skills: () =>
+      !hidden('skills') && data.skills.length > 0 ? (
         <section className="cp-sec">
           <div className="cp-sec-title">
             Skills <b>◆</b>
@@ -96,11 +106,16 @@ export function Compact({ data, photoData, showPhoto = true }: CvTemplateProps) 
             ))}
           </div>
         </section>
-      )}
-
-      {(data.education.length > 0 || data.certifications.length > 0 || data.languages.length > 0) && (
+      ) : null,
+    education: () => {
+      // Fused bottom band: Education · Certifications · Languages columns.
+      const showEdu = !hidden('education') && data.education.length > 0
+      const showCert = !hidden('certifications') && data.certifications.length > 0
+      const showLang = !hidden('languages') && data.languages.length > 0
+      if (!showEdu && !showCert && !showLang) return null
+      return (
         <div className="cp-bottom">
-          {data.education.length > 0 && (
+          {showEdu && (
             <div>
               <div className="cp-bot-title">Education</div>
               {data.education.slice(0, 2).map((e) => (
@@ -111,7 +126,7 @@ export function Compact({ data, photoData, showPhoto = true }: CvTemplateProps) 
               ))}
             </div>
           )}
-          {data.certifications.length > 0 && (
+          {showCert && (
             <div>
               <div className="cp-bot-title">Certifications</div>
               {data.certifications.slice(0, 2).map((cert) => (
@@ -122,7 +137,7 @@ export function Compact({ data, photoData, showPhoto = true }: CvTemplateProps) 
               ))}
             </div>
           )}
-          {data.languages.length > 0 && (
+          {showLang && (
             <div>
               <div className="cp-bot-title">Languages</div>
               <p className="cp-lang">
@@ -136,7 +151,40 @@ export function Compact({ data, photoData, showPhoto = true }: CvTemplateProps) 
             </div>
           )}
         </div>
-      )}
+      )
+    },
+  }
+
+  const customById = new Map((data.customSections || []).map((s) => [s.id, s]))
+  const order = effectiveSectionOrder(data)
+
+  return (
+    <div className="cv-page tpl-compact">
+      <header className="cp-hdr">
+        {showPhoto && <CvPhoto photoData={photoData} name={c.fullName} className="cp-photo" />}
+        <div className="cp-mid">
+          <h1 className="cp-name">{c.fullName || 'Your Name'}</h1>
+          {c.jobTitle && <div className="cp-role">{c.jobTitle}</div>}
+          {headlineBits[0] && <p className="cp-tag">{headlineBits[0]}</p>}
+        </div>
+        {contacts.length > 0 && (
+          <div className="cp-contact">
+            {contacts.map((line, i) => (
+              <span key={i} style={{ display: 'contents' }}>
+                {CIcon[line.icon]('')}
+                <span>{line.text}</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </header>
+
+      {order.map((key) => {
+        const custom = customById.get(key)
+        if (custom) return <Fragment key={key}>{hidden(key) ? null : renderCustom(custom)}</Fragment>
+        const render = blocks[key]
+        return <Fragment key={key}>{render ? render() : null}</Fragment>
+      })}
     </div>
   )
 }

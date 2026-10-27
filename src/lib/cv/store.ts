@@ -2,18 +2,19 @@
 
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import type { CvData, DesignSettings, PortfolioProject, PortfolioSpec, PublishedInfo, CvLink, LinkKind } from './types'
+import type { CvData, DesignSettings, PortfolioProject, PortfolioSpec, PublishedInfo, CvLink, LinkKind, CustomSection, CustomSectionItem } from './types'
 import { emptyCv, emptyPortfolio, normalizeCv, normalizePortfolio, uid } from './types'
+import { effectiveSectionOrder } from './sections'
 import { DEFAULT_PALETTE } from './palettes'
 import { SAMPLE_CV } from './sample'
 
 export type BuilderStep =
   | 'template' | 'contact' | 'experience' | 'education' | 'skills'
-  | 'summary' | 'extras' | 'review' | 'jobmatch' | 'export'
+  | 'summary' | 'extras' | 'sections' | 'review' | 'jobmatch' | 'export'
 
 export const STEP_ORDER: BuilderStep[] = [
   'template', 'contact', 'experience', 'education', 'skills',
-  'summary', 'extras', 'review', 'jobmatch', 'export',
+  'summary', 'extras', 'sections', 'review', 'jobmatch', 'export',
 ]
 
 export const STEP_META: Record<BuilderStep, { title: string; hint: string }> = {
@@ -24,6 +25,7 @@ export const STEP_META: Record<BuilderStep, { title: string; hint: string }> = {
   skills: { title: 'Skills', hint: 'What you are great at' },
   summary: { title: 'Professional Summary', hint: 'Your story in a few lines' },
   extras: { title: 'Projects & Extras', hint: 'Projects, certifications, languages' },
+  sections: { title: 'Sections & Layout', hint: 'Reorder, hide, or add your own sections' },
   review: { title: 'Review & Score', hint: 'How strong is your CV?' },
   jobmatch: { title: 'Job Match', hint: 'Beat the ATS robots' },
   export: { title: 'Export & Share', hint: 'Download, portfolio website & publish' },
@@ -75,6 +77,17 @@ interface SeemehereState {
   addLink: (kind: LinkKind) => void
   updateLink: (id: string, patch: Partial<CvLink>) => void
   removeLink: (id: string) => void
+
+  // Section layout (R3): reorder / hide core sections, manage custom sections
+  toggleSectionHidden: (key: string) => void
+  moveSection: (key: string, dir: -1 | 1) => void
+  addCustomSection: () => string
+  updateCustomSection: (id: string, patch: Partial<CustomSection>) => void
+  removeCustomSection: (id: string) => void
+  addCustomItem: (sectionId: string) => string
+  updateCustomItem: (sectionId: string, itemId: string, patch: Partial<CustomSectionItem>) => void
+  removeCustomItem: (sectionId: string, itemId: string) => void
+  moveCustomItem: (sectionId: string, itemId: string, dir: -1 | 1) => void
 
   setDesign: (patch: Partial<DesignSettings>) => void
   setPhoto: (dataUrl: string) => void
@@ -207,6 +220,86 @@ export const useCvStore = create<SeemehereState>()(
       removeLink: (id) =>
         set((s) => ({ cv: { ...s.cv, contact: { ...s.cv.contact, links: s.cv.contact.links.filter((l) => l.id !== id) } } })),
 
+      toggleSectionHidden: (key) =>
+        set((s) => {
+          const cur = s.cv.hiddenSections || []
+          const next = cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]
+          return { cv: { ...s.cv, hiddenSections: next } }
+        }),
+      moveSection: (key, dir) =>
+        set((s) => {
+          const order = effectiveSectionOrder(s.cv)
+          const i = order.indexOf(key)
+          const j = i + dir
+          if (i < 0 || j < 0 || j >= order.length) return s
+          const next = [...order]
+          ;[next[i], next[j]] = [next[j], next[i]]
+          return { cv: { ...s.cv, sectionOrder: next } }
+        }),
+
+      addCustomSection: () => {
+        const id = uid()
+        set((s) => ({ cv: { ...s.cv, customSections: [...(s.cv.customSections || []), { id, name: '', items: [] }] } }))
+        return id
+      },
+      updateCustomSection: (id, patch) =>
+        set((s) => ({
+          cv: { ...s.cv, customSections: (s.cv.customSections || []).map((sec) => (sec.id === id ? { ...sec, ...patch } : sec)) },
+        })),
+      removeCustomSection: (id) =>
+        set((s) => ({
+          cv: {
+            ...s.cv,
+            customSections: (s.cv.customSections || []).filter((sec) => sec.id !== id),
+            hiddenSections: (s.cv.hiddenSections || []).filter((k) => k !== id),
+          },
+        })),
+      addCustomItem: (sectionId) => {
+        const itemId = uid()
+        set((s) => ({
+          cv: {
+            ...s.cv,
+            customSections: (s.cv.customSections || []).map((sec) =>
+              sec.id === sectionId ? { ...sec, items: [...sec.items, { id: itemId, title: '', subtitle: '', body: '' }] } : sec,
+            ),
+          },
+        }))
+        return itemId
+      },
+      updateCustomItem: (sectionId, itemId, patch) =>
+        set((s) => ({
+          cv: {
+            ...s.cv,
+            customSections: (s.cv.customSections || []).map((sec) =>
+              sec.id === sectionId ? { ...sec, items: sec.items.map((it) => (it.id === itemId ? { ...it, ...patch } : it)) } : sec,
+            ),
+          },
+        })),
+      removeCustomItem: (sectionId, itemId) =>
+        set((s) => ({
+          cv: {
+            ...s.cv,
+            customSections: (s.cv.customSections || []).map((sec) =>
+              sec.id === sectionId ? { ...sec, items: sec.items.filter((it) => it.id !== itemId) } : sec,
+            ),
+          },
+        })),
+      moveCustomItem: (sectionId, itemId, dir) =>
+        set((s) => ({
+          cv: {
+            ...s.cv,
+            customSections: (s.cv.customSections || []).map((sec) => {
+              if (sec.id !== sectionId) return sec
+              const arr = [...sec.items]
+              const i = arr.findIndex((it) => it.id === itemId)
+              const j = i + dir
+              if (i < 0 || j < 0 || j >= arr.length) return sec
+              ;[arr[i], arr[j]] = [arr[j], arr[i]]
+              return { ...sec, items: arr }
+            }),
+          },
+        })),
+
       setDesign: (patch) => set((s) => ({ design: { ...s.design, ...patch } })),
       setPhoto: (dataUrl) => set({ photoData: dataUrl }),
       setPublishInfo: (info) => set({ publishInfo: info }),
@@ -267,7 +360,7 @@ export const useCvStore = create<SeemehereState>()(
     }),
     {
       name: 'seemehere-cv-v1',
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({ cv: s.cv, design: s.design, photoData: s.photoData, portfolio: s.portfolio, publishInfo: s.publishInfo, builderStarted: s.builderStarted, activeProfileId: s.activeProfileId }),
       migrate: (persisted: unknown) => {

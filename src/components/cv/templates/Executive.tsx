@@ -1,13 +1,143 @@
 'use client'
 
+import { Fragment } from 'react'
+import type { ReactNode } from 'react'
 import { CvPhoto, dateRange, showC, contactLines } from './shared'
 import type { CvTemplateProps } from './shared'
+import type { CustomSection } from '@/lib/cv/types'
+import { effectiveSectionOrder, isSectionHidden } from '@/lib/cv/sections'
 
-/** Template 4 · Executive — ivory paper, luxury serif, accent rules */
+/** Template 4 · Executive — ivory paper, luxury serif, accent rules.
+ *  The untitled summary stays as the intro paragraph; Experience, Projects,
+ *  Education, Credentials and the "Expertise & Languages" block follow the
+ *  user's chosen order (skills + languages move together as one block, each
+ *  half respecting its own hide flag). Custom sections use Executive's grid. */
 export function Executive({ data, photoData, showPhoto = true }: CvTemplateProps) {
   const c = data.contact
   // Use contactLines() so website + custom links are included
   const contacts = contactLines(data).map((l) => l.text)
+  const hidden = (key: string) => isSectionHidden(data, key)
+
+  const renderCustom = (sec: CustomSection) => {
+    if (sec.items.length === 0) return null
+    return (
+      <section className="ex-sec">
+        <div className="ex-sec-title">{sec.name || 'Additional'}</div>
+        {sec.items.map((it) => (
+          <div className="ex-xp" key={it.id}>
+            <div className="ex-date">{it.subtitle || ''}</div>
+            <div>
+              {it.title && <div className="ex-xp-role">{it.title}</div>}
+              {it.body && (
+                <p style={{ fontSize: 11.5, lineHeight: 1.6, color: 'var(--mut)', marginTop: 2, whiteSpace: 'pre-line' }}>{it.body}</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </section>
+    )
+  }
+
+  const blocks: Record<string, () => ReactNode> = {
+    experience: () =>
+      !hidden('experience') && data.experience.length > 0 ? (
+        <section className="ex-sec">
+          <div className="ex-sec-title">Professional Experience</div>
+          {data.experience.map((e) => (
+            <div className="ex-xp" key={e.id}>
+              <div className="ex-date">{dateRange(e.startDate, e.endDate)}</div>
+              <div>
+                <div className="ex-xp-role">{e.role}</div>
+                <div className="ex-xp-org">{showC([e.company, e.location])}</div>
+                {e.bullets.filter(Boolean).length > 0 && (
+                  <ul>
+                    {e.bullets.filter(Boolean).map((b, i) => (
+                      <li key={i}>{b}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          ))}
+        </section>
+      ) : null,
+    projects: () =>
+      !hidden('projects') && data.projects.length > 0 ? (
+        <section className="ex-sec">
+          <div className="ex-sec-title">Selected Projects</div>
+          {data.projects.map((p) => (
+            <div className="ex-xp" key={p.id}>
+              <div className="ex-date">{p.liveUrl || ''}</div>
+              <div>
+                <div className="ex-xp-role">{p.name}</div>
+                <div className="ex-xp-org">{showC([p.tech, p.repoUrl])}</div>
+                {p.description && <p style={{ fontSize: 11.5, lineHeight: 1.5, color: 'var(--mut)', marginTop: 3 }}>{p.description}</p>}
+              </div>
+            </div>
+          ))}
+        </section>
+      ) : null,
+    education: () =>
+      !hidden('education') && data.education.length > 0 ? (
+        <section className="ex-sec">
+          <div className="ex-sec-title">Education</div>
+          {data.education.slice(0, 2).map((e) => (
+            <div className="ex-xp" key={e.id}>
+              <div className="ex-date">{dateRange(e.startDate, e.endDate)}</div>
+              <div>
+                <div className="ex-xp-role">{[e.degree, e.note].filter(Boolean).join(' — ')}</div>
+                <div className="ex-xp-org">{showC([e.school, e.location])}</div>
+              </div>
+            </div>
+          ))}
+        </section>
+      ) : null,
+    certifications: () =>
+      !hidden('certifications') && data.certifications.length > 0 ? (
+        <section className="ex-sec">
+          <div className="ex-sec-title">Credentials</div>
+          <div className="ex-2col">
+            {data.certifications.slice(0, 2).map((cert) => (
+              <div className="ex-kv" key={cert.id}>
+                <b>{cert.name}</b>
+                <span>{[cert.issuer, cert.year].filter(Boolean).join(' · ')}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null,
+    skills: () => {
+      // Fused block: Skills + Languages share one section on this template.
+      const showSk = !hidden('skills') && data.skills.length > 0
+      const showLang = !hidden('languages') && data.languages.length > 0
+      if (!showSk && !showLang) return null
+      return (
+        <section className="ex-sec">
+          <div className="ex-sec-title">Expertise &amp; Languages</div>
+          <div className="ex-2col">
+            {showSk && (
+              <p className="ex-line" style={{ lineHeight: 1.8 }}>
+                {data.skills.slice(0, 9).map((s) => s.name).join(' · ')}
+              </p>
+            )}
+            {showLang && (
+              <p className="ex-line">
+                {data.languages.map((l, i) => (
+                  <span key={l.id}>
+                    <b>{l.name}</b> — {l.level}
+                    {i < data.languages.length - 1 && <span className="d">◆</span>}
+                  </span>
+                ))}
+              </p>
+            )}
+          </div>
+        </section>
+      )
+    },
+  }
+
+  const customById = new Map((data.customSections || []).map((s) => [s.id, s]))
+  const order = effectiveSectionOrder(data)
 
   return (
     <div className="cv-page tpl-executive">
@@ -32,101 +162,19 @@ export function Executive({ data, photoData, showPhoto = true }: CvTemplateProps
       </header>
       <div className="ex-goldrule" />
 
-      {data.summary && (
+      {/* Intro paragraph — fixed position, respects hide toggle */}
+      {!hidden('summary') && data.summary && (
         <section className="ex-sec">
           <p className="ex-sum">{data.summary}</p>
         </section>
       )}
 
-      {data.experience.length > 0 && (
-        <section className="ex-sec">
-          <div className="ex-sec-title">Professional Experience</div>
-          {data.experience.map((e) => (
-            <div className="ex-xp" key={e.id}>
-              <div className="ex-date">{dateRange(e.startDate, e.endDate)}</div>
-              <div>
-                <div className="ex-xp-role">{e.role}</div>
-                <div className="ex-xp-org">{showC([e.company, e.location])}</div>
-                {e.bullets.filter(Boolean).length > 0 && (
-                  <ul>
-                    {e.bullets.filter(Boolean).map((b, i) => (
-                      <li key={i}>{b}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-          ))}
-        </section>
-      )}
-
-      {data.projects.length > 0 && (
-        <section className="ex-sec">
-          <div className="ex-sec-title">Selected Projects</div>
-          {data.projects.map((p) => (
-            <div className="ex-xp" key={p.id}>
-              <div className="ex-date">{p.liveUrl || ''}</div>
-              <div>
-                <div className="ex-xp-role">{p.name}</div>
-                <div className="ex-xp-org">{showC([p.tech, p.repoUrl])}</div>
-                {p.description && <p style={{ fontSize: 11.5, lineHeight: 1.5, color: 'var(--mut)', marginTop: 3 }}>{p.description}</p>}
-              </div>
-            </div>
-          ))}
-        </section>
-      )}
-
-      {data.education.length > 0 && (
-        <section className="ex-sec">
-          <div className="ex-sec-title">Education</div>
-          {data.education.slice(0, 2).map((e) => (
-            <div className="ex-xp" key={e.id}>
-              <div className="ex-date">{dateRange(e.startDate, e.endDate)}</div>
-              <div>
-                <div className="ex-xp-role">{[e.degree, e.note].filter(Boolean).join(' — ')}</div>
-                <div className="ex-xp-org">{showC([e.school, e.location])}</div>
-              </div>
-            </div>
-          ))}
-        </section>
-      )}
-
-      {data.certifications.length > 0 && (
-        <section className="ex-sec">
-          <div className="ex-sec-title">Credentials</div>
-          <div className="ex-2col">
-            {data.certifications.slice(0, 2).map((cert) => (
-              <div className="ex-kv" key={cert.id}>
-                <b>{cert.name}</b>
-                <span>{[cert.issuer, cert.year].filter(Boolean).join(' · ')}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {(data.skills.length > 0 || data.languages.length > 0) && (
-        <section className="ex-sec">
-          <div className="ex-sec-title">Expertise &amp; Languages</div>
-          <div className="ex-2col">
-            {data.skills.length > 0 && (
-              <p className="ex-line" style={{ lineHeight: 1.8 }}>
-                {data.skills.slice(0, 9).map((s) => s.name).join(' · ')}
-              </p>
-            )}
-            {data.languages.length > 0 && (
-              <p className="ex-line">
-                {data.languages.map((l, i) => (
-                  <span key={l.id}>
-                    <b>{l.name}</b> — {l.level}
-                    {i < data.languages.length - 1 && <span className="d">◆</span>}
-                  </span>
-                ))}
-              </p>
-            )}
-          </div>
-        </section>
-      )}
+      {order.map((key) => {
+        const custom = customById.get(key)
+        if (custom) return <Fragment key={key}>{hidden(key) ? null : renderCustom(custom)}</Fragment>
+        const render = blocks[key]
+        return <Fragment key={key}>{render ? render() : null}</Fragment>
+      })}
     </div>
   )
 }
