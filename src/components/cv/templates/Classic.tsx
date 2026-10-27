@@ -1,12 +1,14 @@
 'use client'
 
-import { CvPhoto, dateRange, showC } from './shared'
+import { CvPhoto, dateRange, showC, contactLines, CIcon } from './shared'
 import type { CvTemplateProps } from './shared'
 
 /** Template 1 · Classic — traditional serif, ATS-safe, framed photo */
 export function Classic({ data, photoData, showPhoto = true }: CvTemplateProps) {
   const c = data.contact
-  const contactBits = [c.location, c.phone, c.email, c.linkedin].filter(Boolean)
+  // Use the shared contactLines() helper so website + custom links (GitHub,
+  // X, Instagram, …) are all included — not just email/phone/location/linkedin.
+  const contacts = contactLines(data)
 
   return (
     <div className="cv-page tpl-classic">
@@ -15,10 +17,10 @@ export function Classic({ data, photoData, showPhoto = true }: CvTemplateProps) 
           <h1 className="cl-name">{c.fullName || 'Your Name'}</h1>
           {c.jobTitle && <p className="cl-role">{c.jobTitle}</p>}
           <p className="cl-contact">
-            {contactBits.map((bit, i) => (
+            {contacts.map((line, i) => (
               <span key={i}>
-                <span className="cl-bit">{bit}</span>
-                {i < contactBits.length - 1 && <span className="cl-sep">·</span>}{' '}
+                <span className="cl-bit">{line.text}</span>
+                {i < contacts.length - 1 && <span className="cl-sep">·</span>}{' '}
               </span>
             ))}
           </p>

@@ -1,12 +1,13 @@
 'use client'
 
-import { CvPhoto, dateRange } from './shared'
+import { CvPhoto, dateRange, contactLines } from './shared'
 import type { CvTemplateProps } from './shared'
 
 /** Template 3 · Minimal — Swiss whitespace, hairlines, quiet accent */
 export function Minimal({ data, photoData, showPhoto = true }: CvTemplateProps) {
   const c = data.contact
-  const contacts = [c.email, c.phone, c.location, c.linkedin].filter(Boolean)
+  // Use contactLines() so website + custom links are included
+  const contacts = contactLines(data).map((l) => l.text)
 
   return (
     <div className="cv-page tpl-minimal">

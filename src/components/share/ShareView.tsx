@@ -5,7 +5,7 @@ import Link from 'next/link'
 import type { CvData, PortfolioSpec, TemplateId, ThemeSpec } from '@/lib/cv/types'
 import { normalizePortfolio } from '@/lib/cv/types'
 import { DEFAULT_PALETTE } from '@/lib/cv/palettes'
-import { CvPageA4, TEMPLATE_META } from '@/components/cv/templates'
+import { CvPages, TEMPLATE_META } from '@/components/cv/templates'
 import { PortfolioSite } from './PortfolioSite'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -33,7 +33,9 @@ interface PublishedCv {
   updatedAt: string
 }
 
-/** Public page for a published username — website (portfolio) or classic paper CV */
+/** Public page for a published username — website (portfolio) or classic paper CV.
+ *  The paper CV now renders as a multi-page stack so longer CVs flow onto
+ *  page 2, 3, … without anything getting cut off at the bottom. */
 export function ShareView({ username }: { username: string }) {
   const [data, setData] = useState<PublishedCv | null>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'notfound'>('loading')
@@ -111,13 +113,15 @@ export function ShareView({ username }: { username: string }) {
 
         {state === 'ready' && data && (
           <div className="flex flex-col items-center gap-5">
+            {/* Multi-page CV — flows onto page 2, 3, … if content exceeds A4 */}
             <div style={{ zoom: scale }} className="rounded-xl shadow-2xl">
-              <CvPageA4
+              <CvPages
                 templateId={(TEMPLATE_META.some((t) => t.id === data.templateId) ? data.templateId : 'modern') as TemplateId}
                 theme={theme}
                 data={data.cv}
                 photoData={data.photoData || undefined}
                 showPhoto
+                fontScale={1}
               />
             </div>
             <div className="mb-6 rounded-full border border-slate-300 bg-white/90 px-4 py-2 text-xs text-slate-500 shadow-sm">

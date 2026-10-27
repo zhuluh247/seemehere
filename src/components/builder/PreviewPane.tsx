@@ -1,17 +1,27 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
-import { ZoomIn, ZoomOut, ScanSearch, FileDown } from 'lucide-react'
+import { ZoomIn, ZoomOut, FileDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useCvStore } from '@/lib/cv/store'
-import { CvPageA4, TEMPLATE_META } from '@/components/cv/templates'
+import { CvPages, TEMPLATE_META } from '@/components/cv/templates'
 import { exportPdf } from '@/lib/cv/export'
-import { toast } from 'sonner'
+
+/** Hydration-safe mounted flag (SSR-safe; resolves to true on the client) */
+const subscribeNoop = () => () => {}
+function useMounted(): boolean {
+  return useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false,
+  )
+}
 
 /**
- * Live A4 preview (scaled to panel width) + fit controls + hidden full-size
- * renderer used by PDF/PNG export.
+ * Live A4 preview (scaled to panel width) + fit controls + hidden multi-page
+ * renderer used by PDF/PNG export. Multi-page renders into N viewports so
+ * longer CVs flow onto page 2, 3, … without clipping.
  */
 export function PreviewPane({ mobileOverlay = false, onClose }: { mobileOverlay?: boolean; onClose?: () => void }) {
   const cv = useCvStore((s) => s.cv)
@@ -21,7 +31,7 @@ export function PreviewPane({ mobileOverlay = false, onClose }: { mobileOverlay?
 
   const wrapRef = useRef<HTMLDivElement>(null)
   const [panelScale, setPanelScale] = useState(0.55)
-  const [fits, setFits] = useState(true)
+  const [pageCount, setPageCount] = useState(1)
 
   // Scale preview to panel width
   useEffect(() => {
@@ -35,37 +45,17 @@ export function PreviewPane({ mobileOverlay = false, onClose }: { mobileOverlay?
     return () => ro.disconnect()
   }, [])
 
-  // Overflow check against the hidden full-size render
-  const checkFit = useCallback(() => {
-    requestAnimationFrame(() => {
-      const inner = document.getElementById('cv-render-inner')
-      const page = inner?.querySelector('.cv-page') as HTMLElement | null
-      if (!inner || !page) return
-      const prev = inner.style.zoom
-      inner.style.zoom = '1'
-      const natural = page.scrollHeight // natural content height at zoom 1
-      inner.style.zoom = prev
-      setFits(natural <= 1123 + 4)
-    })
-  }, [])
-
+  // Read the page count reported by the multi-page renderer (set via data attr)
   useEffect(() => {
-    checkFit()
-  }, [cv, design, photoData, checkFit])
-
-  const autoFit = () => {
-    const inner = document.getElementById('cv-render-inner')
-    const page = inner?.querySelector('.cv-page') as HTMLElement | null
-    if (!inner || !page) return
-    inner.style.zoom = '1'
-    const natural = page.scrollHeight
-    const target = 1112
-    const fit = natural > target ? Math.max(0.72, Math.floor((target / natural) * 100) / 100) : 1
-    inner.style.zoom = String(fit)
-    setDesign({ fontScale: fit })
-    setFits(true)
-    toast.success(fit < 1 ? `Fitted to one page (${Math.round(fit * 100)}%)` : 'Already fits on one page')
-  }
+    const check = () => {
+      const host = document.getElementById('cv-renderer')
+      const pages = host?.querySelectorAll('.cv-page-viewport').length ?? 1
+      setPageCount(pages)
+    }
+    const t = setInterval(check, 600)
+    check()
+    return () => clearInterval(t)
+  }, [cv, design, photoData])
 
   const template = TEMPLATE_META.find((t) => t.id === design.templateId)
 
@@ -74,7 +64,10 @@ export function PreviewPane({ mobileOverlay = false, onClose }: { mobileOverlay?
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-t-xl bg-slate-100 border border-slate-200">
         <div className="text-xs font-medium text-slate-500 truncate">
-          {template?.name} · A4 {fits ? <span className="text-emerald-600">· fits 1 page</span> : <span className="text-amber-600">· overflows</span>}
+          {template?.name} · A4
+          <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+            {pageCount} page{pageCount === 1 ? '' : 's'}
+          </span>
         </div>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="h-7 w-7" title="Smaller text" onClick={() => setDesign({ fontScale: Math.max(0.72, Math.round((design.fontScale - 0.02) * 100) / 100) })}>
@@ -83,9 +76,6 @@ export function PreviewPane({ mobileOverlay = false, onClose }: { mobileOverlay?
           <span className="text-[11px] text-slate-500 w-9 text-center tabular-nums">{Math.round(design.fontScale * 100)}%</span>
           <Button variant="ghost" size="icon" className="h-7 w-7" title="Larger text" onClick={() => setDesign({ fontScale: Math.min(1.15, Math.round((design.fontScale + 0.02) * 100) / 100) })}>
             <ZoomIn className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={autoFit} title="Auto-fit to one page">
-            <ScanSearch className="h-3.5 w-3.5" /> Fit
           </Button>
           <Button variant="outline" size="sm" className="h-7 text-xs gap-1 hidden md:inline-flex" onClick={() => exportPdf()} title="Download PDF via print dialog">
             <FileDown className="h-3.5 w-3.5" /> PDF
@@ -98,51 +88,48 @@ export function PreviewPane({ mobileOverlay = false, onClose }: { mobileOverlay?
         </div>
       </div>
 
-      {/* Scaled live preview */}
+      {/* Scaled live preview — multi-page stack */}
       <div ref={wrapRef} className="flex-1 overflow-auto rounded-b-xl border border-t-0 border-slate-200 bg-slate-200/60 p-3">
-        <div style={{ zoom: panelScale }} className="shadow-xl">
-          <CvPageA4
-            templateId={design.templateId}
-            theme={design.theme}
-            data={cv}
-            photoData={photoData}
-            showPhoto={design.showPhoto}
-            fontScale={design.fontScale}
-          />
+        <div style={{ zoom: panelScale }} className="inline-block">
+          <div className="cv-pages-stack">
+            <CvPages
+              templateId={design.templateId}
+              theme={design.theme}
+              data={cv}
+              photoData={photoData}
+              showPhoto={design.showPhoto}
+              fontScale={design.fontScale}
+            />
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
-/** Hidden full-size render used by PNG capture and printing (portal → body) */
+/** Hidden multi-page render used by PNG capture (per-page) and printing.
+ *  Portals to body so it isn't affected by parent transforms/clipping. */
 export function HiddenRenderer() {
   const cv = useCvStore((s) => s.cv)
   const design = useCvStore((s) => s.design)
   const photoData = useCvStore((s) => s.photoData)
-  const mounted = useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false,
-  )
+  const mounted = useMounted()
   if (!mounted) return null
 
   return createPortal(
     <div
       id="cv-renderer"
       aria-hidden
-      style={{ position: 'fixed', left: -10000, top: 0, width: 794, height: 1123, overflow: 'hidden', background: '#fff' }}
+      style={{ position: 'fixed', left: -10000, top: 0, width: 794, background: '#fff' }}
     >
-      <div id="cv-render-inner" style={{ zoom: design.fontScale }}>
-        <CvPageA4
-          templateId={design.templateId}
-          theme={design.theme}
-          data={cv}
-          photoData={photoData}
-          showPhoto={design.showPhoto}
-          fontScale={1}
-        />
-      </div>
+      <CvPages
+        templateId={design.templateId}
+        theme={design.theme}
+        data={cv}
+        photoData={photoData}
+        showPhoto={design.showPhoto}
+        fontScale={design.fontScale}
+      />
     </div>,
     document.body,
   )

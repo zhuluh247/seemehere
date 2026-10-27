@@ -25,46 +25,65 @@ export function exportPdf() {
   window.print()
 }
 
-// ─── PNG (client-side capture of the full-size hidden render) ────────────────
+// ─── PNG (per-page capture of every .cv-page-viewport inside the hidden
+//       multi-page renderer) — downloads cv-page-1.png, cv-page-2.png, …
+//       For a 1-page CV, downloads just {name}-CV.png (back-compat filename). ─
 export async function exportPng(displayName: string): Promise<void> {
-  const node = document.getElementById('cv-renderer')
-  if (!node) throw new Error('Renderer not ready')
+  const host = document.getElementById('cv-renderer')
+  if (!host) throw new Error('Renderer not ready')
   // Make sure web fonts are loaded, or the capture can render fallback glyphs
   if (typeof document !== 'undefined' && document.fonts?.ready) await document.fonts.ready
 
-  // ROOT CAUSE of the pure-white PNG (QA-verified): the hidden render host is
-  // position:fixed at left:-10000px. html-to-image clones the node but the
-  // capture frame (width/height option) still misses the content — overriding
-  // styles on the CLONE is not enough. The reliable fix: temporarily pull the
-  // LIVE node into the viewport for the duration of the capture, then restore.
-  // zIndex -1 keeps it behind the opaque builder UI so users see no flash.
-  const prev = {
-    left: node.style.left,
-    top: node.style.top,
-    zIndex: node.style.zIndex,
-    background: node.style.background,
+  // Find every A4 viewport slice rendered by <CvPages>
+  const pages = Array.from(host.querySelectorAll<HTMLElement>('.cv-page-viewport'))
+  if (pages.length === 0) throw new Error('No CV pages found to export')
+
+  const baseName = safeFileName(displayName) || 'my-cv'
+
+  // For multi-page: zip-style per-page download as cv-page-1.png, cv-page-2.png
+  // For single-page: keep legacy {name}-CV.png filename
+  const isMulti = pages.length > 1
+
+  // Capture each page by temporarily pulling IT into the viewport (the hidden
+  // host is at left:-10000px which breaks html-to-image's bounding-box calc).
+  for (let i = 0; i < pages.length; i++) {
+    const node = pages[i]
+    const prev = {
+      left: node.style.left,
+      top: node.style.top,
+      zIndex: node.style.zIndex,
+      position: node.style.position,
+    }
+    let dataUrl: string
+    try {
+      // Pull just this page into the visible viewport — zIndex -1 keeps it
+      // behind the opaque builder UI so users see no flash.
+      node.style.position = 'fixed'
+      node.style.left = '0px'
+      node.style.top = `${i * 4}px` // small offset so multi captures don't stack visibly
+      node.style.zIndex = '-1'
+      // Wait a frame so the browser applies the position change before capture
+      await new Promise((r) => requestAnimationFrame(() => r(null)))
+      dataUrl = await toPng(node, {
+        pixelRatio: 2,
+        width: 794,
+        height: 1123,
+        backgroundColor: '#ffffff',
+        style: { margin: '0', transform: 'none', position: 'static', left: '0', top: '0' },
+      })
+    } finally {
+      node.style.left = prev.left
+      node.style.top = prev.top
+      node.style.zIndex = prev.zIndex
+      node.style.position = prev.position
+    }
+    const res = await fetch(dataUrl)
+    const blob = await res.blob()
+    const filename = isMulti ? `${baseName}-cv-page-${i + 1}.png` : `${baseName}-CV.png`
+    downloadBlob(blob, filename)
+    // Small delay between downloads so browsers don't drop multi-file sequences
+    if (i < pages.length - 1) await new Promise((r) => setTimeout(r, 250))
   }
-  let dataUrl: string
-  try {
-    node.style.left = '0px'
-    node.style.top = '0px'
-    node.style.zIndex = '-1'
-    node.style.background = '#ffffff'
-    dataUrl = await toPng(node, {
-      pixelRatio: 2,
-      width: 794,
-      height: 1123,
-      backgroundColor: '#ffffff',
-      style: { margin: '0', transform: 'none' },
-    })
-  } finally {
-    node.style.left = prev.left
-    node.style.top = prev.top
-    node.style.zIndex = prev.zIndex
-    node.style.background = prev.background
-  }
-  const res = await fetch(dataUrl)
-  downloadBlob(await res.blob(), `${safeFileName(displayName)}-CV.png`)
 }
 
 // ─── DOCX (clean universal Word layout, themed headings) ────────────────────

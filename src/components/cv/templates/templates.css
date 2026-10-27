@@ -7,16 +7,55 @@
      --txt  body text     --mut       muted text
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* ─── Multi-page A4 page container ─────────────────────────────────────────
+   The CV template's root .cv-page now flows naturally — no fixed height, no
+   overflow clipping. The CvPages wrapper (see templates/index.tsx) measures the
+   natural content height and renders N viewport slices of 1123px each, so a CV
+   that is too long to fit on one A4 sheet flows onto page 2, 3, … without
+   anything getting cut off. PNG export captures each .cv-page-viewport as a
+   separate file (cv-page-1.png, cv-page-2.png, …). Print relies on
+   page-break-after: always between viewports (see globals.css). */
 .cv-page {
   width: 794px;
-  height: 1123px;
+  min-height: 1123px;
   background: #fff;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   font-family: 'Inter', 'Carlito', 'Liberation Sans', sans-serif;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
+
+/* Outer viewport wrapper — one per A4 page. Width/height fixed at A4 screen px.
+   Overflow hidden so each page clips its own 1123px slice of the full content. */
+.cv-page-viewport {
+  width: 794px;
+  height: 1123px;
+  overflow: hidden;
+  position: relative;
+  background: #fff;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  break-after: page;
+}
+.cv-page-viewport:last-child { break-after: auto; }
+
+/* Stacked multi-page layout on screen — vertical gap between pages */
+.cv-pages-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: center;
+}
+
+/* Avoid breaking inside major sections across page boundaries where possible */
+.cv-page section,
+.cv-page .cl-sec,
+.cv-page .md-sec2,
+.cv-page .mn-sec,
+.cv-page .ex-sec,
+.cv-page .cr-sec,
+.cv-page .cp-sec { break-inside: avoid; }
 
 .cv-photo-initials {
   display: flex;
@@ -169,40 +208,42 @@
 .tpl-creative .cr-band { background: linear-gradient(128deg, var(--acc) 0%, var(--hdr) 100%); color: var(--hdr-txt); padding: 46px 52px 40px; position: relative; overflow: hidden; }
 .tpl-creative .cr-band::before { content: ""; position: absolute; width: 340px; height: 340px; border-radius: 50%; background: rgba(255,255,255,.07); top: -190px; right: -90px; }
 .tpl-creative .cr-band::after { content: ""; position: absolute; width: 220px; height: 220px; border-radius: 50%; background: rgba(255,255,255,.06); bottom: -130px; right: 130px; }
-.tpl-creative .cr-row { display: flex; align-items: center; gap: 26px; position: relative; }
+.tpl-creative .cr-row { display: flex; align-items: center; gap: 26px; position: relative; flex-wrap: wrap; }
 .tpl-creative .cr-photo { width: 118px; height: 118px; border-radius: 26px; object-fit: cover; border: 4px solid rgba(255,255,255,.35); box-shadow: 0 10px 30px rgba(30,27,75,.35); flex-shrink: 0; font-size: 38px; }
-.tpl-creative .cr-name { font-size: 33px; font-weight: 900; letter-spacing: -.5px; }
+.tpl-creative .cr-name { font-size: 33px; font-weight: 900; letter-spacing: -.5px; word-break: break-word; }
 .tpl-creative .cr-role { font-size: 14.5px; font-weight: 500; opacity: .9; margin-top: 5px; }
 .tpl-creative .cr-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; position: relative; }
-.tpl-creative .cr-chip { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.22); border-radius: 20px; padding: 5.5px 13px; font-size: 11px; font-weight: 500; }
-.tpl-creative .cr-chip svg { width: 11.5px; height: 11.5px; opacity: .9; }
-.tpl-creative .cr-body { flex: 1; padding: 30px 52px 32px; }
-.tpl-creative .cr-sec { margin-bottom: 22px; }
+.tpl-creative .cr-chip { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.22); border-radius: 20px; padding: 5.5px 13px; font-size: 11px; font-weight: 500; max-width: 100%; }
+.tpl-creative .cr-chip span { word-break: break-word; min-width: 0; }
+.tpl-creative .cr-chip svg { width: 11.5px; height: 11.5px; opacity: .9; flex-shrink: 0; }
+.tpl-creative .cr-body { flex: 1; padding: 30px 52px 32px; min-width: 0; }
+.tpl-creative .cr-sec { margin-bottom: 22px; break-inside: avoid; }
 .tpl-creative .cr-sec:last-child { margin-bottom: 0; }
 .tpl-creative .cr-sec-title { font-size: 13px; font-weight: 800; letter-spacing: 2.4px; text-transform: uppercase; color: var(--acc); display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-.tpl-creative .cr-sec-title::after { content: ""; flex: 1; height: 2px; border-radius: 2px; background: linear-gradient(90deg, var(--acc-soft) 0%, transparent 70%); }
-.tpl-creative .cr-sum { font-size: 12.5px; line-height: 1.62; color: var(--txt); opacity: .9; }
+.tpl-creative .cr-sec-title::after { content: ""; flex: 1; height: 2px; border-radius: 2px; background: linear-gradient(90deg, var(--acc-soft) 0%, transparent 70%); min-width: 20px; }
+.tpl-creative .cr-sum { font-size: 12.5px; line-height: 1.62; color: var(--txt); opacity: .9; word-break: break-word; }
 .tpl-creative .cr-tl { position: relative; padding-left: 22px; }
 .tpl-creative .cr-tl::before { content: ""; position: absolute; left: 5.5px; top: 7px; bottom: 7px; width: 2px; border-radius: 2px; background: var(--acc-soft); }
-.tpl-creative .cr-item { position: relative; margin-bottom: 15px; }
+.tpl-creative .cr-item { position: relative; margin-bottom: 15px; break-inside: avoid; }
 .tpl-creative .cr-item:last-child { margin-bottom: 0; }
 .tpl-creative .cr-item::before { content: ""; position: absolute; left: -22px; top: 5px; width: 13px; height: 13px; border-radius: 50%; background: #fff; border: 3.5px solid var(--acc); }
-.tpl-creative .cr-top { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; }
-.tpl-creative .cr-xp-role { font-size: 14px; font-weight: 700; color: var(--txt); }
-.tpl-creative .cr-xp-org { font-size: 12px; font-weight: 500; color: var(--acc); margin-top: 2px; }
+.tpl-creative .cr-top { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.tpl-creative .cr-xp-role { font-size: 14px; font-weight: 700; color: var(--txt); word-break: break-word; }
+.tpl-creative .cr-xp-org { font-size: 12px; font-weight: 500; color: var(--acc); margin-top: 2px; word-break: break-word; }
 .tpl-creative .cr-date { font-size: 10.5px; font-weight: 700; color: var(--acc); background: var(--acc-soft); border-radius: 14px; padding: 3px 10px; white-space: nowrap; }
 .tpl-creative .cr-item ul { margin: 6px 0 0; padding-left: 15px; }
-.tpl-creative .cr-item li { font-size: 12px; line-height: 1.5; color: var(--txt); opacity: .9; margin-bottom: 3px; }
+.tpl-creative .cr-item li { font-size: 12px; line-height: 1.5; color: var(--txt); opacity: .9; margin-bottom: 3px; word-break: break-word; }
 .tpl-creative .cr-item li::marker { color: var(--acc); }
 .tpl-creative .cr-tag { font-size: 11.5px; font-weight: 500; color: var(--acc); background: var(--acc-soft); border: 1px solid var(--acc-soft); border-radius: 18px; padding: 5.5px 13px; }
 .tpl-creative .cr-tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .tpl-creative .cr-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
-.tpl-creative .cr-kv { margin-bottom: 9px; }
+.tpl-creative .cr-grid2 > * { min-width: 0; }
+.tpl-creative .cr-kv { margin-bottom: 9px; word-break: break-word; }
 .tpl-creative .cr-kv b { font-size: 12.5px; font-weight: 700; color: var(--txt); display: block; }
-.tpl-creative .cr-kv span { font-size: 11.5px; color: var(--mut); margin-top: 1px; display: block; }
-.tpl-creative .cr-lang { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
-.tpl-creative .cr-lang b { font-size: 12.5px; font-weight: 700; color: var(--txt); width: 70px; }
-.tpl-creative .cr-bar { flex: 1; height: 7px; border-radius: 4px; background: var(--acc-soft); overflow: hidden; }
+.tpl-creative .cr-kv span { font-size: 11.5px; color: var(--mut); margin-top: 1px; display: block; word-break: break-word; }
+.tpl-creative .cr-lang { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; flex-wrap: wrap; }
+.tpl-creative .cr-lang b { font-size: 12.5px; font-weight: 700; color: var(--txt); width: 70px; flex-shrink: 0; }
+.tpl-creative .cr-bar { flex: 1; min-width: 80px; height: 7px; border-radius: 4px; background: var(--acc-soft); overflow: hidden; }
 .tpl-creative .cr-bar i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--acc), var(--hdr)); }
 .tpl-creative .cr-lang em { font-style: normal; font-size: 10.5px; color: var(--mut); width: 92px; text-align: right; }
 

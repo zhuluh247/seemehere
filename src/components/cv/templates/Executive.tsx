@@ -1,12 +1,13 @@
 'use client'
 
-import { CvPhoto, dateRange, showC } from './shared'
+import { CvPhoto, dateRange, showC, contactLines } from './shared'
 import type { CvTemplateProps } from './shared'
 
 /** Template 4 · Executive — ivory paper, luxury serif, accent rules */
 export function Executive({ data, photoData, showPhoto = true }: CvTemplateProps) {
   const c = data.contact
-  const contacts = [c.location, c.phone, c.email, c.linkedin].filter(Boolean)
+  // Use contactLines() so website + custom links are included
+  const contacts = contactLines(data).map((l) => l.text)
 
   return (
     <div className="cv-page tpl-executive">
