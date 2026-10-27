@@ -1,0 +1,29 @@
+# SEEMEHERE — Render Blueprint
+# Deploy: Render Dashboard → New + → Blueprint → point at this repo → Apply.
+# Render reads this file and configures everything below automatically.
+
+databases: [] # intentionally empty — use free Neon Postgres (see README-DEPLOY.md)
+
+services:
+  - type: web
+    name: seemehere
+    runtime: node
+    plan: free
+    region: oregon # change to frankfurt/singapore if closer to your users
+    buildCommand: npm install && npm run prisma:gen:pg && npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    autoDeploy: true # every push to main deploys automatically
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
+      - key: HOSTNAME
+        value: 0.0.0.0 # required so the standalone server binds inside Render's container
+      - key: AI_PROVIDER
+        value: gemini # 'gemini' | 'none' — see README-DEPLOY.md
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+      - key: GEMINI_API_KEY
+        sync: false # paste your free key in the Render dashboard (optional — AI hides if empty)
+      - key: DATABASE_URL
+        sync: false # paste your free Neon connection string in the Render dashboard

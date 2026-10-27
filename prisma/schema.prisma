@@ -1,0 +1,24 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Published CV snapshots for public share pages (cv/{username})
+// Editing data stays client-side (localStorage) — only published snapshots live here.
+model PublishedCv {
+  id            String   @id @default(cuid())
+  username      String   @unique // lowercase handle, e.g. "miketyson"
+  claimKeyHash  String // scrypt hash of the secret claim key
+  displayName   String
+  templateId    String   @default("modern")
+  themeJson     String   @default("{}") // ThemeSpec as JSON
+  cvJson        String // full CV data as JSON
+  photoData     String   @default("") // compressed photo dataURL
+  viewCount     Int      @default(0)
+  publishedAt   DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

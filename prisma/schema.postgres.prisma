@@ -1,0 +1,28 @@
+// Production schema for Neon Postgres (used when deploying to Render).
+// Switch with:  npx prisma db push --schema prisma/schema.postgres.prisma
+// The dev schema (schema.prisma) uses SQLite for the sandbox environment.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Published CV snapshots for public share pages (cv/{username})
+// Editing data stays client-side (localStorage) — only published snapshots live here.
+model PublishedCv {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  claimKeyHash String
+  displayName  String
+  templateId   String   @default("modern")
+  themeJson    String   @default("{}")
+  cvJson       String
+  photoData    String   @default("")
+  viewCount    Int      @default(0)
+  publishedAt  DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
