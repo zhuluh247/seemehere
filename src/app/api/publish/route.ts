@@ -88,15 +88,21 @@ export async function POST(req: NextRequest) {
     ...(user ? { ownerUserId: user.id } : {}),
   }
 
+  // Fresh secret update token on EVERY successful publish/update. Stored
+  // hashed server-side, returned once to the client (kept in localStorage).
+  // Anonymous owners then prove ownership by sending it back as `claimKey`
+  // (verified below via the legacy claim-key path) — so the same browser can
+  // always update its own page, account or no account.
+  const updateToken = randomBytes(24).toString('hex')
+
   if (existing) {
-    await db.publishedCv.update({ where: { username }, data })
-    return NextResponse.json({ username, updated: true, url: `/cv/${username}` })
+    await db.publishedCv.update({ where: { username }, data: { ...data, claimKeyHash: hashLegacyClaimKey(updateToken) } })
+    return NextResponse.json({ username, updated: true, url: `/cv/${username}`, updateToken })
   }
 
-  // New publish: claim keys are retired — anonymous pages get an unusable placeholder hash
   await db.publishedCv.create({
-    data: { username, claimKeyHash: hashLegacyClaimKey(`orphan:${username}:${Date.now()}`), ...data },
+    data: { username, claimKeyHash: hashLegacyClaimKey(updateToken), ...data },
   })
 
-  return NextResponse.json({ username, updated: false, url: `/cv/${username}` })
+  return NextResponse.json({ username, updated: false, url: `/cv/${username}`, updateToken })
 }

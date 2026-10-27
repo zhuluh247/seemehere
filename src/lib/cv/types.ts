@@ -124,6 +124,19 @@ export interface PortfolioProject {
   tags: string // "React · Design"
 }
 
+export interface TestimonialItem {
+  id: string
+  quote: string // the recommendation text
+  author: string // who said it
+  role: string // their title/company, e.g. "Manager, Acme Ltd"
+}
+
+export interface GalleryItem {
+  id: string
+  image: string // compressed dataURL, '' = none
+  caption: string
+}
+
 export interface PortfolioSpec {
   enabled: boolean
   mode: 'light' | 'dark'
@@ -137,8 +150,12 @@ export interface PortfolioSpec {
     education: boolean
     skills: boolean
     contact: boolean
+    testimonials: boolean
+    gallery: boolean
   }
   projects: PortfolioProject[]
+  testimonials: TestimonialItem[]
+  gallery: GalleryItem[]
 }
 
 export const emptyPortfolio = (): PortfolioSpec => ({
@@ -147,13 +164,18 @@ export const emptyPortfolio = (): PortfolioSpec => ({
   accent: '#4F46E5',
   tagline: '',
   about: '',
-  sections: { about: true, projects: true, experience: true, education: false, skills: true, contact: true },
+  sections: { about: true, projects: true, experience: true, education: false, skills: true, contact: true, testimonials: false, gallery: false },
   projects: [],
+  testimonials: [],
+  gallery: [],
 })
 
 export interface PublishedInfo {
   username: string
   claimKey: string // legacy — no longer issued; kept for old browsers' saved data
+  /** Secret proof-of-ownership for anonymous updates: issued by the server on
+   *  every successful publish, stored hashed server-side, sent back on update */
+  updateToken?: string
   publishedAt: string
 }
 
@@ -202,6 +224,8 @@ export function normalizePortfolio(raw: unknown): PortfolioSpec {
     about: typeof p.about === 'string' ? p.about : '',
     sections: { ...base.sections, ...(p.sections || {}) },
     projects: Array.isArray(p.projects) ? p.projects : [],
+    testimonials: Array.isArray(p.testimonials) ? p.testimonials : [],
+    gallery: Array.isArray(p.gallery) ? p.gallery : [],
   }
 }
 

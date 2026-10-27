@@ -166,3 +166,16 @@ Render auto-deploys. Nothing else to do.
 - If SEEMEHERE ever goes commercial, Render requires the $7/mo Starter plan — a happy-day problem.
 - The password is the only key to editing an account's published usernames — the app warns users
   at signup that forgotten passwords cannot be recovered (no email).
+
+## 🌐 Custom domain (when you buy your own name)
+
+SEEMEHERE is **domain-agnostic** — nothing is hard-coded to `seemehere.onrender.com`.
+
+When your new domain is ready:
+
+1. Render Dashboard → Settings → **Custom Domains** → add your domain and follow the DNS instructions (CNAME or A record at your registrar).
+2. Render Dashboard → Environment → add / update:
+   - `NEXT_PUBLIC_SITE_URL` = `https://yourdomain.com`  (no trailing slash)
+3. Render redeploys automatically. Everything that prints an absolute URL — social preview cards (OG), share intents, QR codes, sitemap — now uses your domain. No code changes, ever.
+
+> HTTPS certificate is issued automatically by Render once DNS verifies.

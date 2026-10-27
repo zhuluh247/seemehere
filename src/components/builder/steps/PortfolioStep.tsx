@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { Globe, Upload, Trash2, Plus, Image as ImageIcon, Eye, ChevronUp, ChevronDown, Wand2, Moon, Sun } from 'lucide-react'
+import { Globe, Upload, Trash2, Plus, Image as ImageIcon, Eye, ChevronUp, ChevronDown, Wand2, Moon, Sun, Quote, Images } from 'lucide-react'
 import { compressImage } from '@/lib/cv/export'
 import { toast } from 'sonner'
 import { PortfolioSite } from '@/components/share/PortfolioSite'
+import { uid } from '@/lib/cv/types'
 
 const ACCENTS = ['#4F46E5', '#0EA5E9', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#0F172A']
 
@@ -36,6 +37,28 @@ export function PortfolioStep() {
     } catch {
       toast.error('Could not read that image')
     }
+  }
+
+  const pickGalleryImage = async (id: string, file: File | undefined) => {
+    if (!file) return
+    if (!file.type.startsWith('image/')) return toast.error('Please choose an image file')
+    if (file.size > 10 * 1024 * 1024) return toast.error('Image too large — pick one under 10MB')
+    try {
+      const small = await compressImage(file, 900, 0.8)
+      patchPortfolio({ gallery: portfolio.gallery.map((g) => (g.id === id ? { ...g, image: small } : g)) })
+      toast.success('Image added')
+    } catch {
+      toast.error('Could not read that image')
+    }
+  }
+
+  const moveList = <T extends { id: string }>(list: T[], id: string, dir: -1 | 1): T[] => {
+    const i = list.findIndex((x) => x.id === id)
+    const j = i + dir
+    if (i < 0 || j < 0 || j >= list.length) return list
+    const copy = [...list]
+    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+    return copy
   }
 
   const importFromCv = () => {
@@ -154,6 +177,8 @@ export function PortfolioStep() {
                   ['education', 'Education'],
                   ['skills', 'Skills'],
                   ['contact', 'Contact'],
+                  ['testimonials', 'Testimonials'],
+                  ['gallery', 'Gallery'],
                 ] as const
               ).map(([key, label]) => (
                 <label key={key} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 cursor-pointer hover:bg-slate-50">
@@ -226,6 +251,83 @@ export function PortfolioStep() {
                       <Field label="Code link" value={p.repoUrl} onChange={(v) => updPProject(p.id, { repoUrl: v })} placeholder="github.com/…" />
                       <Field label="Tags" value={p.tags} onChange={(v) => updPProject(p.id, { tags: v })} placeholder="React · Design" />
                     </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Testimonials */}
+          <div className="rounded-xl border border-slate-200 p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-1.5"><Quote className="h-4 w-4 text-violet-500" /> Testimonials</h3>
+                <p className="text-[11px] text-slate-500">Short recommendations from bosses, clients or colleagues.</p>
+              </div>
+              <Button variant="outline" size="sm" className="h-8 gap-1 text-xs" onClick={() => patchPortfolio({ testimonials: [...portfolio.testimonials, { id: uid(), quote: '', author: '', role: '' }] })}>
+                <Plus className="h-3.5 w-3.5" /> Add
+              </Button>
+            </div>
+            {portfolio.testimonials.length === 0 && (
+              <p className="text-xs text-slate-400 rounded-lg border border-dashed border-slate-200 px-3 py-4 text-center">No testimonials yet — add the best line anyone has said about your work.</p>
+            )}
+            {portfolio.testimonials.map((t, i) => (
+              <div key={t.id} className="rounded-xl border border-slate-200 p-3 space-y-2 bg-white">
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <Field label={`Quote ${i + 1}`} value={t.quote} onChange={(v) => patchPortfolio({ testimonials: portfolio.testimonials.map((x) => (x.id === t.id ? { ...x, quote: v } : x)) })} placeholder="Ada delivered beyond every expectation…" />
+                  </div>
+                  <div className="flex flex-col">
+                    <button className="text-slate-300 hover:text-violet-600 disabled:opacity-30" disabled={i === 0} onClick={() => patchPortfolio({ testimonials: moveList(portfolio.testimonials, t.id, -1) })} tabIndex={-1}><ChevronUp className="h-3.5 w-3.5" /></button>
+                    <button className="text-slate-300 hover:text-violet-600 disabled:opacity-30" disabled={i === portfolio.testimonials.length - 1} onClick={() => patchPortfolio({ testimonials: moveList(portfolio.testimonials, t.id, 1) })} tabIndex={-1}><ChevronDown className="h-3.5 w-3.5" /></button>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:text-red-600" onClick={() => patchPortfolio({ testimonials: portfolio.testimonials.filter((x) => x.id !== t.id) })}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-2">
+                  <Field label="Who said it" value={t.author} onChange={(v) => patchPortfolio({ testimonials: portfolio.testimonials.map((x) => (x.id === t.id ? { ...x, author: v } : x)) })} placeholder="Mrs. Bello" />
+                  <Field label="Their role / company" value={t.role} onChange={(v) => patchPortfolio({ testimonials: portfolio.testimonials.map((x) => (x.id === t.id ? { ...x, role: v } : x)) })} placeholder="Manager, Acme Ltd" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Gallery */}
+          <div className="rounded-xl border border-slate-200 p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-1.5"><Images className="h-4 w-4 text-violet-500" /> Gallery</h3>
+                <p className="text-[11px] text-slate-500">Visual showcase — designs, certificates, event photos, anything that proves your work.</p>
+              </div>
+              <Button variant="outline" size="sm" className="h-8 gap-1 text-xs" onClick={() => patchPortfolio({ gallery: [...portfolio.gallery, { id: uid(), image: '', caption: '' }] })}>
+                <Plus className="h-3.5 w-3.5" /> Add
+              </Button>
+            </div>
+            {portfolio.gallery.length === 0 && (
+              <p className="text-xs text-slate-400 rounded-lg border border-dashed border-slate-200 px-3 py-4 text-center">No gallery images yet.</p>
+            )}
+            {portfolio.gallery.map((g, i) => (
+              <div key={g.id} className="rounded-xl border border-slate-200 p-3 flex items-start gap-3 bg-white">
+                <label className="relative group cursor-pointer shrink-0">
+                  <div className="h-20 w-28 overflow-hidden rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center">
+                    {g.image ? <img src={g.image} alt={g.caption || 'Gallery'} className="h-full w-full object-cover" /> : <ImageIcon className="h-6 w-6 text-slate-300" />}
+                  </div>
+                  <span className="absolute inset-0 hidden group-hover:flex items-center justify-center rounded-lg bg-black/40 text-[10px] font-semibold text-white">{g.image ? 'Change' : 'Upload'}</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => pickGalleryImage(g.id, e.target.files?.[0])} />
+                </label>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <Field label={`Caption ${i + 1}`} value={g.caption} onChange={(v) => patchPortfolio({ gallery: portfolio.gallery.map((x) => (x.id === g.id ? { ...x, caption: v } : x)) })} placeholder="Brand identity for Kudi Café" />
+                    </div>
+                    <div className="flex flex-col">
+                      <button className="text-slate-300 hover:text-violet-600 disabled:opacity-30" disabled={i === 0} onClick={() => patchPortfolio({ gallery: moveList(portfolio.gallery, g.id, -1) })} tabIndex={-1}><ChevronUp className="h-3.5 w-3.5" /></button>
+                      <button className="text-slate-300 hover:text-violet-600 disabled:opacity-30" disabled={i === portfolio.gallery.length - 1} onClick={() => patchPortfolio({ gallery: moveList(portfolio.gallery, g.id, 1) })} tabIndex={-1}><ChevronDown className="h-3.5 w-3.5" /></button>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:text-red-600" onClick={() => patchPortfolio({ gallery: portfolio.gallery.filter((x) => x.id !== g.id) })}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </div>

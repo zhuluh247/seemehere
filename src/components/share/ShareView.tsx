@@ -122,7 +122,6 @@ export function ShareView({ username }: { username: string }) {
             </div>
             <div className="mb-6 rounded-full border border-slate-300 bg-white/90 px-4 py-2 text-xs text-slate-500 shadow-sm">
               <Link href="/" className="font-semibold text-violet-700 hover:underline">Made with SEEMEHERE</Link>
-              {' '}— build your free CV at <Link href="/" className="font-semibold text-violet-700 hover:underline">seemehere</Link>
             </div>
           </div>
         )}

@@ -5,7 +5,7 @@ import { normalizePortfolio } from '@/lib/cv/types'
 import {
   Mail, MapPin, Phone, Github, Linkedin, Twitter, Instagram, Youtube, Dribbble,
   Globe, Link2, Music2, Palette, Layers, BookOpen, ExternalLink, Code2,
-  Briefcase, GraduationCap, Sparkles, FileDown,
+  Briefcase, GraduationCap, Sparkles, FileDown, Quote, UserPlus,
 } from 'lucide-react'
 import { dateRange } from '@/components/cv/templates/shared'
 
@@ -215,6 +215,29 @@ export function PortfolioSite({ data, photoData, portfolio, preview, username }:
           </section>
         )}
 
+        {/* ── Gallery ── */}
+        {sections.gallery !== false && p.gallery.length > 0 && (
+          <section className="py-12">
+            <SectionTitle accent={accent}>Gallery</SectionTitle>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {p.gallery.filter((g) => g.image).map((g) => (
+                <figure key={g.id} className={`group overflow-hidden rounded-2xl border shadow-sm ${card}`}>
+                  <a href={g.image} target="_blank" rel="noopener noreferrer" className="block">
+                    <img
+                      src={g.image}
+                      alt={g.caption || 'Gallery image'}
+                      className="h-52 w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                    />
+                  </a>
+                  {g.caption && (
+                    <figcaption className={`px-4 py-2.5 text-xs ${soft}`}>{g.caption}</figcaption>
+                  )}
+                </figure>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* ── Experience ── */}
         {sections.experience && data.experience.length > 0 && (
           <section className="py-12">
@@ -283,6 +306,30 @@ export function PortfolioSite({ data, photoData, portfolio, preview, username }:
           </section>
         )}
 
+        {/* ── Testimonials ── */}
+        {sections.testimonials !== false && p.testimonials.length > 0 && (
+          <section className="py-12">
+            <SectionTitle accent={accent}>Kind words</SectionTitle>
+            <div className="grid gap-5 sm:grid-cols-2">
+              {p.testimonials.filter((t) => t.quote.trim()).map((t) => (
+                <blockquote key={t.id} className={`relative rounded-2xl border p-5 shadow-sm ${card}`}>
+                  <Quote className="absolute right-4 top-4 h-6 w-6 opacity-15" style={{ color: accent }} />
+                  <p className={`text-sm leading-relaxed ${dark ? 'text-slate-300' : 'text-slate-700'}`}>&ldquo;{t.quote}&rdquo;</p>
+                  <footer className="mt-4 flex items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold" style={{ background: `${accent}1a`, color: accent }}>
+                      {(t.author || '?').trim().charAt(0).toUpperCase()}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold">{t.author}</p>
+                      {t.role && <p className={`truncate text-xs ${soft}`}>{t.role}</p>}
+                    </div>
+                  </footer>
+                </blockquote>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* ── Contact ── */}
         {sections.contact && (
           <section className="py-12">
@@ -304,6 +351,16 @@ export function PortfolioSite({ data, photoData, portfolio, preview, username }:
               )}
               {c.phone && (
                 <p className="mt-3 inline-flex items-center gap-1.5 text-xs opacity-80"><Phone className="h-3 w-3" /> {c.phone}</p>
+              )}
+              {username && !preview && (c.email || c.phone) && (
+                <div className="mt-5">
+                  <a
+                    href={`/api/vcard/${username}`}
+                    className="inline-flex items-center gap-2 rounded-full bg-white/15 px-5 py-2 text-xs font-semibold text-white ring-1 ring-white/40 backdrop-blur transition-transform hover:-translate-y-0.5 hover:bg-white/25"
+                  >
+                    <UserPlus className="h-3.5 w-3.5" /> Add me to contacts
+                  </a>
+                </div>
               )}
             </div>
           </section>

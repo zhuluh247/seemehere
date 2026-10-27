@@ -29,13 +29,40 @@ export function exportPdf() {
 export async function exportPng(displayName: string): Promise<void> {
   const node = document.getElementById('cv-renderer')
   if (!node) throw new Error('Renderer not ready')
-  const dataUrl = await toPng(node, {
-    pixelRatio: 2,
-    width: 794,
-    height: 1123,
-    backgroundColor: '#ffffff',
-    style: { transform: 'none' },
-  })
+  // Make sure web fonts are loaded, or the capture can render fallback glyphs
+  if (typeof document !== 'undefined' && document.fonts?.ready) await document.fonts.ready
+
+  // ROOT CAUSE of the pure-white PNG (QA-verified): the hidden render host is
+  // position:fixed at left:-10000px. html-to-image clones the node but the
+  // capture frame (width/height option) still misses the content — overriding
+  // styles on the CLONE is not enough. The reliable fix: temporarily pull the
+  // LIVE node into the viewport for the duration of the capture, then restore.
+  // zIndex -1 keeps it behind the opaque builder UI so users see no flash.
+  const prev = {
+    left: node.style.left,
+    top: node.style.top,
+    zIndex: node.style.zIndex,
+    background: node.style.background,
+  }
+  let dataUrl: string
+  try {
+    node.style.left = '0px'
+    node.style.top = '0px'
+    node.style.zIndex = '-1'
+    node.style.background = '#ffffff'
+    dataUrl = await toPng(node, {
+      pixelRatio: 2,
+      width: 794,
+      height: 1123,
+      backgroundColor: '#ffffff',
+      style: { margin: '0', transform: 'none' },
+    })
+  } finally {
+    node.style.left = prev.left
+    node.style.top = prev.top
+    node.style.zIndex = prev.zIndex
+    node.style.background = prev.background
+  }
   const res = await fetch(dataUrl)
   downloadBlob(await res.blob(), `${safeFileName(displayName)}-CV.png`)
 }
