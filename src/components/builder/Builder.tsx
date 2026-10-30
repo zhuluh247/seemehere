@@ -81,13 +81,14 @@ export function Builder() {
     }
   }, [user, hydrated, profiles, activeProfileId, cv.contact.fullName, hydrateFromCloud])
 
-  // Cloud autosave (debounced) — only when signed in
+  // Cloud autosave (debounced) — only when signed in (kind: "cv")
   useEffect(() => {
     if (!user || !hydrated || !hasContent) return
     const t = setTimeout(() => {
       void saveActiveDraft({
         id: activeProfileId,
         name: cv.contact.fullName || 'My CV',
+        kind: 'cv',
         templateId: design.templateId,
         theme: design.theme,
         cv,
@@ -164,8 +165,8 @@ export function Builder() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-60">
                 <DropdownMenuLabel className="text-[11px] text-slate-400">My CV profiles</DropdownMenuLabel>
-                {profiles.length === 0 && <div className="px-2 py-1.5 text-xs text-slate-400">Nothing saved yet</div>}
-                {profiles.map((p) => (
+                {profiles.filter((p) => (p.kind || 'cv') !== 'portfolio').length === 0 && <div className="px-2 py-1.5 text-xs text-slate-400">Nothing saved yet</div>}
+                {profiles.filter((p) => (p.kind || 'cv') !== 'portfolio').map((p) => (
                   <DropdownMenuItem key={p.id} onClick={() => hydrateFromCloud(p)} className="gap-2 text-xs">
                     <span className="flex-1 truncate">{p.name || 'My CV'}</span>
                     {p.id === activeProfileId && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}

@@ -8,14 +8,17 @@ export const dynamic = 'force-dynamic'
 // GET /api/admin/stats — dashboard payload for /admin (admin cookie required).
 // All aggregation is DB-agnostic (works on Postgres and SQLite dev alike).
 //
-// Two traffic streams live in PageView:
+// Traffic streams live in PageView:
 //   username != ""  → public CV / portfolio page views
 //   username == ""  → MAIN WEBSITE visits (home page, mode "home")
-// They are reported separately so "Views" never mix with "Website visitors".
+// R6: public pages carry a `kind` ("cv" | "portfolio"), so link counts and
+// visitor counts are split per kind by joining PageView.usernames against
+// PublishedCv.kind.
 
 interface TopRow {
   username: string
   displayName: string
+  kind: string // "cv" | "portfolio"
   templateId: string
   views: number // all-time PageView rows
   legacyViewCount: number // PublishedCv.viewCount (pre-R4 counter, still shown to owners)
@@ -39,11 +42,21 @@ export async function GET(req: NextRequest) {
   const since30 = new Date(now - 30 * DAY)
 
   try {
+    // R6: link counts split by kind (legacy rows default to "cv")
+    const publishedRows = await db.publishedCv.findMany({
+      select: { username: true, kind: true },
+      take: 50_000,
+    })
+    const published = publishedRows.length
+    const cvUsernames = publishedRows.filter((r) => (r.kind || 'cv') !== 'portfolio').map((r) => r.username)
+    const pfUsernames = publishedRows.filter((r) => (r.kind || 'cv') === 'portfolio').map((r) => r.username)
+
     const [
-      published, users, viewsAllTime, views7, views30,
-      homeAllTime, home7, home30, cvRows30, homeRows30,
+      users, viewsAllTime, views7, views30,
+      homeAllTime, home7, home30,
+      cvViewsAllTime, pfViewsAllTime, cvViews7, pfViews7, cvViews30, pfViews30,
+      cvRows30, homeRows30,
     ] = await Promise.all([
-      db.publishedCv.count(),
       db.user.count(),
       db.pageView.count({ where: { username: { not: '' } } }),
       db.pageView.count({ where: { username: { not: '' }, createdAt: { gte: since7 } } }),
@@ -52,6 +65,13 @@ export async function GET(req: NextRequest) {
       db.pageView.count({ where: { username: '' } }),
       db.pageView.count({ where: { username: '', createdAt: { gte: since7 } } }),
       db.pageView.count({ where: { username: '', createdAt: { gte: since30 } } }),
+      // per-kind visitor counts (R6) — empty `in: []` safely counts 0
+      db.pageView.count({ where: { username: { in: cvUsernames } } }),
+      db.pageView.count({ where: { username: { in: pfUsernames } } }),
+      db.pageView.count({ where: { username: { in: cvUsernames }, createdAt: { gte: since7 } } }),
+      db.pageView.count({ where: { username: { in: pfUsernames }, createdAt: { gte: since7 } } }),
+      db.pageView.count({ where: { username: { in: cvUsernames }, createdAt: { gte: since30 } } }),
+      db.pageView.count({ where: { username: { in: pfUsernames }, createdAt: { gte: since30 } } }),
       // daily buckets source — capped for safety on spammy traffic
       db.pageView.findMany({
         where: { username: { not: '' }, createdAt: { gte: since30 } },
@@ -67,17 +87,22 @@ export async function GET(req: NextRequest) {
       }),
     ])
 
+    // kind lookup for the daily series
+    const kindByUsername = new Map(publishedRows.map((r) => [r.username, (r.kind || 'cv')]))
+
     // Zero-filled 30-day series (UTC days, oldest → today)
-    const daily: { date: string; views: number; home: number }[] = []
+    const daily: { date: string; views: number; home: number; pf: number }[] = []
     const byDay = new Map<string, number>()
     for (let i = 29; i >= 0; i--) {
       const date = dayKey(new Date(now - i * DAY))
-      daily.push({ date, views: 0, home: 0 })
+      daily.push({ date, views: 0, home: 0, pf: 0 })
       byDay.set(date, daily.length - 1)
     }
     for (const row of cvRows30) {
       const idx = byDay.get(dayKey(row.createdAt))
-      if (idx !== undefined) daily[idx].views++
+      if (idx === undefined) continue
+      if (kindByUsername.get(row.username) === 'portfolio') daily[idx].pf++
+      else daily[idx].views++
     }
     for (const row of homeRows30) {
       const idx = byDay.get(dayKey(row.createdAt))
@@ -97,7 +122,7 @@ export async function GET(req: NextRequest) {
     const rows = topUsernames.length
       ? await db.publishedCv.findMany({
           where: { username: { in: topUsernames } },
-          select: { username: true, displayName: true, templateId: true, viewCount: true, publishedAt: true, updatedAt: true },
+          select: { username: true, displayName: true, kind: true, templateId: true, viewCount: true, publishedAt: true, updatedAt: true },
         })
       : []
     const byUsername = new Map(rows.map((r) => [r.username, r]))
@@ -107,6 +132,7 @@ export async function GET(req: NextRequest) {
         return {
           username: g.username,
           displayName: r?.displayName || g.username,
+          kind: r?.kind || 'cv',
           templateId: r?.templateId || 'modern',
           views: g._count.username,
           legacyViewCount: r?.viewCount ?? 0,
@@ -121,11 +147,12 @@ export async function GET(req: NextRequest) {
     const recentRaw = await db.publishedCv.findMany({
       orderBy: { updatedAt: 'desc' },
       take: 10,
-      select: { username: true, displayName: true, templateId: true, viewCount: true, publishedAt: true, updatedAt: true },
+      select: { username: true, displayName: true, kind: true, templateId: true, viewCount: true, publishedAt: true, updatedAt: true },
     })
     const recent: TopRow[] = recentRaw.map((r) => ({
       username: r.username,
       displayName: r.displayName,
+      kind: r.kind || 'cv',
       templateId: r.templateId,
       views: 0,
       legacyViewCount: r.viewCount,
@@ -136,7 +163,15 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(
       {
-        totals: { published, users, viewsAllTime, views7, views30, homeAllTime, home7, home30 },
+        totals: {
+          published, users,
+          cvLinks: cvUsernames.length,
+          pfLinks: pfUsernames.length,
+          viewsAllTime, views7, views30,
+          cvViewsAllTime, pfViewsAllTime,
+          cvViews7, pfViews7, cvViews30, pfViews30,
+          homeAllTime, home7, home30,
+        },
         daily,
         top,
         recent,

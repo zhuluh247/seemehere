@@ -10,6 +10,7 @@ import type { CvData, DesignSettings, PortfolioSpec } from './types'
 export interface CloudDraft {
   id: string
   name: string
+  kind?: string // "cv" | "portfolio" (R6 split; older drafts default to cv)
   templateId: string
   theme: Partial<DesignSettings['theme']>
   cv: CvData
@@ -36,6 +37,7 @@ interface AuthState {
   saveActiveDraft: (payload: {
     id: string | null
     name: string
+    kind?: 'cv' | 'portfolio'
     templateId: string
     theme: DesignSettings['theme']
     cv: CvData
@@ -140,6 +142,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       const entry: CloudDraft = {
         id: j.id,
         name: payload.name,
+        kind: payload.kind || 'cv',
         templateId: payload.templateId,
         theme: payload.theme,
         cv: payload.cv,

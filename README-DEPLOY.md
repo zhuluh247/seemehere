@@ -47,7 +47,6 @@ Keep this tab open — you'll paste it in step 4.
 |---|---|
 | `DATABASE_URL` | the Neon connection string from step 2 |
 | `GEMINI_API_KEY` | your free AI key (or leave empty — the app works without AI and simply hides the AI buttons) |
-| `ADMIN_PASSWORD` | any long password of your choice — enables the `/admin` dashboard (analytics + SEO settings). Optional; leave empty to disable `/admin` entirely |
 
 4. Click **Apply** → Render installs, builds and starts the app (~3–5 min first time).
 
@@ -151,7 +150,6 @@ cron-job.org (free) → pings /api/health every 10 min → no sleep
 | `GEMINI_API_KEY` | from aistudio.google.com/apikey | only if AI wanted |
 | `GEMINI_MODEL` | `gemini-2.0-flash` | optional (has default) |
 | `AUTH_SECRET` | any long random string | optional (falls back to a value derived from `DATABASE_URL`) |
-| `ADMIN_PASSWORD` | any long password | optional — enables the `/admin` dashboard (page-view analytics + SEO settings). Leave empty to disable `/admin` |
 | `NODE_VERSION` | `20.18.0` | set by render.yaml |
 
 ## Updating the app later

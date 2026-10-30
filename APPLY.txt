@@ -1,0 +1,96 @@
+SEEMEHERE — R7 · FULL COMPLETE PROJECT ZIP
+==========================================
+
+This is the ENTIRE project — every file, whole and in sync. No partial
+patches, no missing pieces. This fixes the problems you hit last time
+(404 on Build Portfolio, style picker showing nothing, options broken):
+those happened because the previous zip only contained 28 changed files
+that were meant to be copied ON TOP of your existing folder — replacing
+your whole src/ folder with them left out all the other files the app
+needs. This zip cannot cause that: it IS the whole app.
+
+
+WHAT'S INSIDE
+-------------
+src/                    all application code (R1–R7 complete)
+prisma/                 database schemas (SQLite dev + Postgres prod)
+public/                 images, template previews, PDF worker
+package.json + lock     dependencies (npm install restores the rest)
+next.config.ts, tsconfig.json, tailwind, postcss, eslint, components.json
+render.yaml             Render auto-deploy blueprint
+README.md, README-DEPLOY.md, Caddyfile
+.env.example            template for a fresh setup (see below)
+worklog.md              full development history
+
+NOT included on purpose (to protect YOUR local data):
+- .env                  your existing one stays untouched — keep it!
+- db/                   your local database stays untouched
+- node_modules/         restored by npm install
+- .next/                rebuilt automatically
+
+
+HOW TO APPLY (2 minutes)
+------------------------
+1. Unzip this file.
+2. Copy EVERYTHING inside it over your project folder (the same folder
+   you push to GitHub from). Choose "Replace" when asked.
+   → Do NOT delete your .env file or your db/ folder. They are not in
+     this zip, so copying over them will not touch them.
+3. In the terminal, inside your project folder:
+
+     npm install
+     npx prisma generate
+
+4. Start it:
+
+     npm run dev
+
+5. Open http://localhost:3000 and hard-refresh the browser
+   (Ctrl+Shift+R) so old cached scripts are dropped.
+
+That's all. No database migration, no SQL, nothing manual — this release
+changed NO database schema, so your existing data keeps working as-is.
+
+
+DEPLOYING (Render — unchanged flow)
+-----------------------------------
+1. Commit and push from your Desktop folder to GitHub as usual:
+
+     git add -A
+     git commit -m "R7: 6 new portfolio styles, animations, landing polish"
+     git push
+
+2. Render detects the commit and auto-deploys. Nothing to click, nothing
+   to run by hand — the app migrates its own database at startup.
+
+
+WHAT'S NEW IN R7
+----------------
+1. SIX new portfolio templates (GenZ six all kept):
+   PROFESSIONAL
+   - Atelier  — ivory studio minimal, serif, refined
+   - Monolith — bold corporate, oversized type (always dark)
+   - Meridian — clean consulting, structured and polished
+   BEAUTIFUL
+   - Noir     — black & gold, quiet luxury, cinematic (always dark)
+   - Lagoon   — aqua calm, flowing wave divider
+   - Bloom    — soft botanical garden pastels
+2. Animations option: Design tab → Animations → None / Subtle / Rich.
+   None = printed page. Subtle = sections fade in on scroll.
+   Rich = entrances + reveals + hover lifts. Visitors with "reduce
+   motion" enabled always get the still version automatically.
+3. All 15 portfolio styles mobile-hardened (no sideways scroll, fluid
+   type, tap-friendly targets) — verified at phone width.
+4. Landing page: quiet "Sign in" link at the top (no loud button),
+   animated hero entrance, drifting background blob, scroll-reveal on
+   every section, scrolling style-name ribbon.
+5. Template count wording is now "20+ templates" everywhere.
+
+
+IF SOMETHING LOOKS OFF
+----------------------
+- 404 or old page after applying? You probably skipped the
+  Ctrl+Shift+R hard refresh, or npm install didn't finish.
+- "Module not found" on npm run dev? Run npm install again inside the
+  folder that contains package.json.
+- Styles show but look unstyled? Restart npm run dev once.

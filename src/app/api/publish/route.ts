@@ -12,6 +12,7 @@ export const dynamic = 'force-dynamic'
 
 interface PublishBody {
   username?: string
+  kind?: string // "cv" | "portfolio" (R6 split; default "cv")
   claimKey?: string // legacy — accepted to update pre-v1.1 anonymous pages
   displayName?: string
   templateId?: string
@@ -79,6 +80,7 @@ export async function POST(req: NextRequest) {
   const photoData = (body.photoData || '').slice(0, MAX_PHOTO_CHARS)
 
   const data = {
+    kind: body.kind === 'portfolio' ? 'portfolio' : 'cv',
     displayName: (body.displayName || 'My CV').slice(0, 80),
     templateId: (body.templateId || 'modern').slice(0, 20),
     themeJson: JSON.stringify(body.theme || {}),

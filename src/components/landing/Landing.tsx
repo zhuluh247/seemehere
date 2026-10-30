@@ -263,7 +263,7 @@ export function Landing() {
           <div className="land-blob pointer-events-none absolute -top-24 left-1/2 h-96 w-[900px] -translate-x-1/2 rounded-full bg-gradient-to-r from-violet-200/50 to-indigo-200/50 blur-3xl" />
           <div className="land-hero relative mx-auto max-w-6xl px-4 pb-16 pt-14 text-center sm:pt-20">
             <Badge variant="outline" className="mb-5 rounded-full border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
-              <Sparkles className="mr-1.5 h-3.5 w-3.5" /> 27 free templates · 12 CV + 15 portfolio · AI included
+              <Sparkles className="mr-1.5 h-3.5 w-3.5" /> 20+ free templates · 12 CV + 15 portfolio · AI included
             </Badge>
             <h1 className="mx-auto max-w-3xl text-4xl font-black leading-tight tracking-tight text-slate-900 sm:text-6xl">
               A CV that gets interviews.{' '}
@@ -391,7 +391,7 @@ export function Landing() {
         <section id="templates" className="py-16">
           <div className="mx-auto max-w-6xl px-4">
             <div className="land-reveal mb-8 text-center">
-              <h2 className="text-3xl font-black tracking-tight text-slate-900">27 templates. Infinite colors. Zero nags.</h2>
+              <h2 className="text-3xl font-black tracking-tight text-slate-900">20+ templates. Infinite colors. Zero nags.</h2>
               <p className="mt-2 text-sm text-slate-500">Every design accepts any palette — or your own hex — with one tap. All free, all unwatermarked.</p>
             </div>
 

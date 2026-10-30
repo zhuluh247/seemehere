@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useCvStore } from '@/lib/cv/store'
 import { useAuthStore } from '@/lib/cv/auth-store'
 import { exportPdf, exportPng, exportDocx, exportTxt } from '@/lib/cv/export'
@@ -9,42 +10,15 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { LoginModal } from '@/components/auth/LoginModal'
+import { ShareRow } from '@/components/share/ShareRow'
 import { QRCodeSVG } from 'qrcode.react'
-import { FileText, FileImage, FileType2, FileType, Globe, Copy, Download, Loader2, ExternalLink, RefreshCw, Check, Eye, QrCode } from 'lucide-react'
+import { FileText, FileImage, FileType2, FileType, Globe, Copy, Download, Loader2, ExternalLink, RefreshCw, Check, Eye, QrCode, Wand2, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
-import { PortfolioStep } from './PortfolioStep'
 
 interface CheckResp {
   available: boolean
   reason: string
   suggestions: string[]
-}
-
-/** One-tap share intents — WhatsApp / X / LinkedIn / copy */
-function ShareRow({ url }: { url: string }) {
-  const text = `Check out my new CV & portfolio — ${url}`
-  const open = (href: string) => window.open(href, '_blank', 'noopener,width=620,height=640')
-  const btn = 'inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition-colors hover:text-violet-600 hover:border-violet-300'
-  return (
-    <>
-      <button className={`${btn} hover:!text-[#25D366]`} title="Share on WhatsApp" onClick={() => open(`https://wa.me/?text=${encodeURIComponent(text)}`)}>
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
-      </button>
-      <button className={btn} title="Share on X" onClick={() => open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`)}>
-        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-      </button>
-      <button className={`${btn} hover:!text-[#0A66C2]`} title="Share on LinkedIn" onClick={() => open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`)}>
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 1 1 0-4.125 2.062 2.062 0 0 1 0 4.125zM7.119 20.452H3.554V9h3.565v11.452z"/></svg>
-      </button>
-      <button
-        className={`${btn} hover:!text-violet-600`}
-        title="Copy link"
-        onClick={() => navigator.clipboard.writeText(url).then(() => toast.success('Link copied')).catch(() => toast.error('Copy failed'))}
-      >
-        <Copy className="h-3.5 w-3.5" />
-      </button>
-    </>
-  )
 }
 
 export function ExportStep() {
@@ -133,13 +107,17 @@ export function ExportStep() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: u,
+          kind: 'cv', // R6 split — the CV builder only ever publishes paper CVs
           claimKey: publishInfo?.updateToken || publishInfo?.claimKey || undefined, // proof of ownership
           displayName: cv.contact.fullName || 'My CV',
           templateId: design.templateId,
           theme: design.theme,
           cv,
           photoData: design.showPhoto ? photoData : '',
-          portfolio,
+          // R6: portfolio websites live in the dedicated Portfolio Builder now.
+          // Sending an explicitly disabled spec keeps old portfolio-enabled
+          // localStorage data from flipping a republished CV back into a website.
+          portfolio: { ...portfolio, enabled: false },
         }),
       })
       const j = (await res.json()) as { url?: string; error?: string; code?: string; updated?: boolean; updateToken?: string }
@@ -197,15 +175,26 @@ export function ExportStep() {
       <div>
         <h3 className="text-sm font-semibold text-slate-800 mb-3">Download your CV</h3>
         <div className="grid sm:grid-cols-2 gap-3">
-          {dl('PDF — the one to send out', <FileText className="h-5 w-5" />, 'Print dialog → choose "Save as PDF"', exportPdf)}
+          {dl('PDF — the one to send out', <FileText className="h-5 w-5" />, 'Print dialog → choose "Save as PDF"', () => exportPdf(cv.contact.fullName))}
           {dl('PNG image', <FileImage className="h-5 w-5" />, 'For LinkedIn previews & portfolios', () => runExport('png'), busyExport === 'png')}
           {dl('Word document', <FileType2 className="h-5 w-5" />, 'Editable .docx, clean universal layout', () => runExport('docx'), busyExport === 'docx')}
           {dl('Plain text', <FileType className="h-5 w-5" />, 'For portals that mangle PDFs', () => { if (hasContent) exportTxt(cv, cv.contact.fullName); else toast.error('Add at least your name first') })}
         </div>
       </div>
 
-      {/* Portfolio website — creation lives here, below the exports */}
-      <PortfolioStep />
+      {/* Portfolio website — now its own product (R6): teaser + hand-off */}
+      <div className="flex items-start gap-3 rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 to-indigo-50 p-4">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white"><Wand2 className="h-5 w-5" /></span>
+        <div className="flex-1">
+          <h3 className="text-sm font-semibold text-slate-800">Want a full portfolio website?</h3>
+          <p className="mt-1 text-xs leading-relaxed text-slate-600">
+            Websites now live in their own builder — 6 GenZ styles (Aura, Riot, Editorial, Terminal, Bento, Vogue), project galleries, testimonials and your own link. It imports this CV in one tap.
+          </p>
+          <Button asChild size="sm" className="mt-3 h-8 gap-1.5 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-xs text-white">
+            <Link href="/portfolio">Open the Portfolio Builder <ArrowRight className="h-3.5 w-3.5" /></Link>
+          </Button>
+        </div>
+      </div>
 
       {/* Publish / share */}
       <div className="rounded-xl border border-slate-200 p-4 space-y-4">
@@ -214,7 +203,7 @@ export function ExportStep() {
           <div className="flex-1">
             <h3 className="text-sm font-semibold text-slate-800">Publish &amp; get your personal link</h3>
             <p className="text-[11px] text-slate-500">
-              Your {portfolio.enabled ? 'portfolio website' : 'CV'} goes live <b>instantly</b> at <b>seemehere…/cv/yourname</b> — free, no account needed, no ads on your page.
+              Your CV goes live <b>instantly</b> at <b>seemehere…/cv/yourname</b> — free, no account needed, no ads on your page. (Portfolio websites are published from their own builder.)
             </p>
           </div>
         </div>

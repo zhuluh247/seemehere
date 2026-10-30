@@ -24,6 +24,7 @@ const PG_STATEMENTS: string[] = [
     "id" TEXT PRIMARY KEY,
     "userId" TEXT NOT NULL,
     "name" TEXT NOT NULL DEFAULT 'My CV',
+    "kind" TEXT NOT NULL DEFAULT 'cv',
     "templateId" TEXT NOT NULL DEFAULT 'modern',
     "themeJson" TEXT NOT NULL DEFAULT '{}',
     "cvJson" TEXT NOT NULL DEFAULT '{}',
@@ -42,6 +43,7 @@ const PG_STATEMENTS: string[] = [
   `CREATE TABLE IF NOT EXISTS "PublishedCv" (
     "id" TEXT PRIMARY KEY,
     "username" TEXT NOT NULL,
+    "kind" TEXT NOT NULL DEFAULT 'cv',
     "claimKeyHash" TEXT NOT NULL DEFAULT '',
     "ownerUserId" TEXT,
     "displayName" TEXT NOT NULL DEFAULT 'My CV',
@@ -60,6 +62,9 @@ const PG_STATEMENTS: string[] = [
   `ALTER TABLE "PublishedCv" ADD COLUMN IF NOT EXISTS "portfolioJson" TEXT NOT NULL DEFAULT '{}'`,
   `ALTER TABLE "PublishedCv" ADD COLUMN IF NOT EXISTS "photoData" TEXT NOT NULL DEFAULT ''`,
   `ALTER TABLE "PublishedCv" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP`,
+  // R6 split — kind discriminates CV pages from portfolio pages
+  `ALTER TABLE "PublishedCv" ADD COLUMN IF NOT EXISTS "kind" TEXT NOT NULL DEFAULT 'cv'`,
+  `ALTER TABLE "Draft" ADD COLUMN IF NOT EXISTS "kind" TEXT NOT NULL DEFAULT 'cv'`,
   // R4 — page-view analytics + site settings
   `CREATE TABLE IF NOT EXISTS "PageView" (
     "id" TEXT PRIMARY KEY,

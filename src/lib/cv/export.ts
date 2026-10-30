@@ -21,7 +21,17 @@ export function safeFileName(name: string): string {
 }
 
 // ─── PDF (via browser print engine → Save as PDF; text-selectable, ATS-safe) ─
-export function exportPdf() {
+// R6: the suggested filename in the print dialog comes from document.title —
+// so we set it to "<Owner> — CV" while printing and restore right after.
+export function exportPdf(displayName = '') {
+  const prevTitle = document.title
+  if (displayName) document.title = `${displayName} — CV`
+  const restore = () => {
+    document.title = prevTitle
+    window.removeEventListener('afterprint', restore)
+  }
+  window.addEventListener('afterprint', restore)
+  setTimeout(restore, 90_000) // safety net if afterprint never fires
   window.print()
 }
 

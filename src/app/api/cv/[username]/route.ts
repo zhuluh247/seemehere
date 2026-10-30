@@ -68,6 +68,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ username: s
   return NextResponse.json(
     {
       username: row.username,
+      kind: row.kind || 'cv',
       displayName: row.displayName,
       templateId: row.templateId,
       theme,

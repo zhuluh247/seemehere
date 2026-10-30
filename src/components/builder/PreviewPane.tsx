@@ -77,7 +77,7 @@ export function PreviewPane({ mobileOverlay = false, onClose }: { mobileOverlay?
           <Button variant="ghost" size="icon" className="h-7 w-7" title="Larger text" onClick={() => setDesign({ fontScale: Math.min(1.15, Math.round((design.fontScale + 0.02) * 100) / 100) })}>
             <ZoomIn className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" className="h-7 text-xs gap-1 hidden md:inline-flex" onClick={() => exportPdf()} title="Download PDF via print dialog">
+          <Button variant="outline" size="sm" className="h-7 text-xs gap-1 hidden md:inline-flex" onClick={() => exportPdf(cv.contact.fullName)} title="Download PDF via print dialog">
             <FileDown className="h-3.5 w-3.5" /> PDF
           </Button>
           {mobileOverlay && (

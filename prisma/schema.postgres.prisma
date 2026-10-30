@@ -26,6 +26,7 @@ model Draft {
   userId        String
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name          String   @default("My CV")
+  kind          String   @default("cv") // "cv" | "portfolio" (R6 split)
   templateId    String   @default("modern")
   themeJson     String   @default("{}")
   cvJson        String
@@ -40,6 +41,7 @@ model Draft {
 model PublishedCv {
   id            String   @id @default(cuid())
   username      String   @unique
+  kind          String   @default("cv") // "cv" | "portfolio" (R6 split)
   claimKeyHash  String   @default("")
   ownerUserId   String?
   displayName   String

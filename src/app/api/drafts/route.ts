@@ -13,6 +13,7 @@ const MAX_PORTFOLIO_CHARS = 1_500_000
 interface DraftPayload {
   id?: string
   name?: string
+  kind?: string // "cv" | "portfolio" (R6 split; default "cv")
   templateId?: string
   theme?: Record<string, string>
   cv?: unknown
@@ -27,6 +28,7 @@ function parseDraft(raw: unknown) {
   if (cvJson.length > MAX_CV_CHARS) throw new Error('too-large')
   return {
     name: (d.name || 'My CV').slice(0, 80),
+    kind: d.kind === 'portfolio' ? 'portfolio' : 'cv',
     templateId: (d.templateId || 'modern').slice(0, 20),
     themeJson: JSON.stringify(d.theme || {}),
     cvJson,
@@ -39,6 +41,7 @@ function parseDraft(raw: unknown) {
 function shape(row: {
   id: string
   name: string
+  kind: string
   templateId: string
   themeJson: string
   cvJson: string
@@ -62,6 +65,7 @@ function shape(row: {
   return {
     id: row.id,
     name: row.name,
+    kind: row.kind,
     templateId: row.templateId,
     theme,
     cv,
@@ -72,12 +76,19 @@ function shape(row: {
   }
 }
 
-// GET → all drafts (full payloads) for the signed-in user
+// GET → all drafts (full payloads) for the signed-in user; ?kind= filters
 export async function GET(req: NextRequest) {
   await ensureSchema()
   const user = await sessionUser(req)
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
-  const rows = await db.draft.findMany({ where: { userId: user.id }, orderBy: { updatedAt: 'desc' } })
+  const kind = req.nextUrl.searchParams.get('kind')
+  const rows = await db.draft.findMany({
+    where: {
+      userId: user.id,
+      ...(kind === 'cv' || kind === 'portfolio' ? { kind } : {}),
+    },
+    orderBy: { updatedAt: 'desc' },
+  })
   return NextResponse.json({ drafts: rows.map(shape) })
 }
 

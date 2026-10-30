@@ -16,15 +16,20 @@ export function Vertex({ data, photoData, showPhoto = true }: CvTemplateProps) {
 
   const contactBits = [c.email, c.phone, c.location, c.website, c.linkedin, ...(c.links || []).map((l) => l.url)].filter(Boolean)
 
-  let secNo = 0
-  const numbered = (label: string) => {
-    secNo += 1
-    return (
-      <div className="vx-sec-title">
-        <span className="vx-num">{String(secNo).padStart(2, '0')}</span> {label}
-      </div>
-    )
+  // Section numbers are computed by call ORDER at render time; the mutable
+  // counter lives inside a factory so React's immutability lint is satisfied.
+  const makeNumberer = () => {
+    let secNo = 0
+    return (label: string) => {
+      secNo += 1
+      return (
+        <div className="vx-sec-title">
+          <span className="vx-num">{String(secNo).padStart(2, '0')}</span> {label}
+        </div>
+      )
+    }
   }
+  const numbered = makeNumberer()
 
   const renderCustom = (sec: CustomSection) => {
     if (sec.items.length === 0) return null

@@ -15,6 +15,7 @@ import {
   Save,
   Search,
   Users,
+  LayoutTemplate,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,6 +32,7 @@ import { useToast } from '@/hooks/use-toast'
 interface TopRow {
   username: string
   displayName: string
+  kind: string // "cv" | "portfolio"
   templateId: string
   views: number
   legacyViewCount: number
@@ -43,14 +45,22 @@ interface Stats {
   totals: {
     published: number
     users: number
+    cvLinks: number
+    pfLinks: number
     viewsAllTime: number
     views7: number
     views30: number
+    cvViewsAllTime: number
+    pfViewsAllTime: number
+    cvViews7: number
+    pfViews7: number
+    cvViews30: number
+    pfViews30: number
     homeAllTime: number
     home7: number
     home30: number
   }
-  daily: { date: string; views: number; home: number }[]
+  daily: { date: string; views: number; home: number; pf: number }[]
   top: TopRow[]
   recent: TopRow[]
 }
@@ -316,15 +326,17 @@ export function AdminDashboard() {
       <main className="mx-auto max-w-5xl px-4 py-8">
         {tab === 'overview' && (
           <div className="space-y-6">
-            {/* stat cards */}
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+            {/* stat cards (R6: links + visitors split by CV vs portfolio) */}
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               {[
-                { label: 'Published CVs', value: totals?.published, icon: FileText, tone: 'plain' as const },
+                { label: 'CV links created', value: totals?.cvLinks, icon: FileText, tone: 'plain' as const },
+                { label: 'Portfolio links created', value: totals?.pfLinks, icon: Globe2, tone: 'rose' as const },
                 { label: 'Accounts', value: totals?.users, icon: Users, tone: 'plain' as const },
                 { label: 'Website visitors', value: totals?.homeAllTime, icon: Home, tone: 'emerald' as const },
-                { label: 'CV views (all time)', value: totals?.viewsAllTime, icon: Globe2, tone: 'indigo' as const },
-                { label: 'CV views (7 days)', value: totals?.views7, icon: Eye, tone: 'plain' as const },
-                { label: 'CV views (30 days)', value: totals?.views30, icon: BarChart3, tone: 'plain' as const },
+                { label: 'CV views (all time)', value: totals?.cvViewsAllTime, icon: Eye, tone: 'indigo' as const },
+                { label: 'Portfolio views (all time)', value: totals?.pfViewsAllTime, icon: LayoutTemplate, tone: 'rose' as const },
+                { label: 'CV views (7 days)', value: totals?.cvViews7, icon: Eye, tone: 'plain' as const },
+                { label: 'Site visits (30 days)', value: totals?.home30, icon: BarChart3, tone: 'plain' as const },
               ].map((c) => (
                 <div
                   key={c.label}
@@ -333,20 +345,22 @@ export function AdminDashboard() {
                       ? 'border-indigo-200 bg-indigo-50/40'
                       : c.tone === 'emerald'
                         ? 'border-emerald-200 bg-emerald-50/40'
-                        : 'border-slate-200'
+                        : c.tone === 'rose'
+                          ? 'border-rose-200 bg-rose-50/40'
+                          : 'border-slate-200'
                   }`}
                 >
                   <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
                     <c.icon
                       className={`h-3.5 w-3.5 ${
-                        c.tone === 'indigo' ? 'text-indigo-600' : c.tone === 'emerald' ? 'text-emerald-600' : 'text-slate-400'
+                        c.tone === 'indigo' ? 'text-indigo-600' : c.tone === 'emerald' ? 'text-emerald-600' : c.tone === 'rose' ? 'text-rose-600' : 'text-slate-400'
                       }`}
                     />
                     {c.label}
                   </div>
                   <div
                     className={`mt-1.5 text-2xl font-bold tabular-nums ${
-                      c.tone === 'indigo' ? 'text-indigo-700' : c.tone === 'emerald' ? 'text-emerald-700' : 'text-slate-900'
+                      c.tone === 'indigo' ? 'text-indigo-700' : c.tone === 'emerald' ? 'text-emerald-700' : c.tone === 'rose' ? 'text-rose-700' : 'text-slate-900'
                     }`}
                   >
                     {c.value === undefined ? <span className="text-slate-300">—</span> : nf.format(c.value)}
@@ -364,6 +378,9 @@ export function AdminDashboard() {
                     <span className="h-2.5 w-2.5 rounded-sm bg-indigo-500" /> CV views
                   </span>
                   <span className="hidden items-center gap-1.5 text-[11px] text-slate-500 sm:inline-flex">
+                    <span className="h-2.5 w-2.5 rounded-sm bg-rose-400" /> Portfolio views
+                  </span>
+                  <span className="hidden items-center gap-1.5 text-[11px] text-slate-500 sm:inline-flex">
                     <span className="h-2.5 w-2.5 rounded-sm bg-emerald-400" /> Website visitors
                   </span>
                   <Button variant="ghost" size="sm" onClick={() => void loadStats()} disabled={statsLoading} className="text-slate-500">
@@ -372,14 +389,14 @@ export function AdminDashboard() {
                 </div>
               </div>
               <div className="flex h-36 items-end gap-[3px]">
-                {(stats?.daily || Array.from({ length: 30 }, (_, i) => ({ date: String(i), views: 0, home: 0 }))).map((d, i) => {
-                  const total = d.views + d.home
+                {(stats?.daily || Array.from({ length: 30 }, (_, i) => ({ date: String(i), views: 0, home: 0, pf: 0 }))).map((d, i) => {
+                  const total = d.views + d.home + d.pf
                   return (
                     <div
                       key={i}
                       className="group relative flex h-full flex-1 flex-col justify-end"
                       style={{ minWidth: 4 }}
-                      title={`${d.date}: ${nf.format(d.views)} CV view${d.views === 1 ? '' : 's'} · ${nf.format(d.home)} site visitor${d.home === 1 ? '' : 's'}`}
+                      title={`${d.date}: ${nf.format(d.views)} CV view${d.views === 1 ? '' : 's'} · ${nf.format(d.pf)} portfolio view${d.pf === 1 ? '' : 's'} · ${nf.format(d.home)} site visitor${d.home === 1 ? '' : 's'}`}
                     >
                       {d.home > 0 && (
                         <div
@@ -387,9 +404,15 @@ export function AdminDashboard() {
                           style={{ height: `${Math.max(2, (d.home / maxDaily) * 100)}%` }}
                         />
                       )}
+                      {d.pf > 0 && (
+                        <div
+                          className={`${d.home > 0 ? '' : 'rounded-t'} bg-rose-400/90 transition-colors group-hover:bg-rose-500`}
+                          style={{ height: `${Math.max(2, (d.pf / maxDaily) * 100)}%` }}
+                        />
+                      )}
                       {d.views > 0 && (
                         <div
-                          className={`${d.home > 0 ? '' : 'rounded-t'} bg-indigo-500/80 transition-colors group-hover:bg-indigo-600`}
+                          className={`${d.home > 0 || d.pf > 0 ? '' : 'rounded-t'} bg-indigo-500/80 transition-colors group-hover:bg-indigo-600`}
                           style={{ height: `${Math.max(2, (d.views / maxDaily) * 100)}%` }}
                         />
                       )}
@@ -431,7 +454,12 @@ export function AdminDashboard() {
                     {stats?.top.map((r) => (
                       <tr key={r.username} className="border-b border-slate-50 last:border-0">
                         <td className="px-5 py-3">
-                          <div className="font-medium text-slate-900">{r.displayName}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-slate-900">{r.displayName}</span>
+                            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${r.kind === 'portfolio' ? 'bg-rose-100 text-rose-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                              {r.kind === 'portfolio' ? 'Portfolio' : 'CV'}
+                            </span>
+                          </div>
                           <div className="text-xs text-slate-400">/cv/{r.username}</div>
                         </td>
                         <td className="px-5 py-3 tabular-nums font-semibold text-indigo-700">{nf.format(r.views)}</td>
@@ -457,7 +485,7 @@ export function AdminDashboard() {
             {/* recent publishes */}
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-100 px-5 py-4">
-                <h2 className="text-sm font-semibold text-slate-900">Recently updated CVs</h2>
+                <h2 className="text-sm font-semibold text-slate-900">Recently updated pages</h2>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -481,7 +509,12 @@ export function AdminDashboard() {
                     {stats?.recent.map((r) => (
                       <tr key={r.username} className="border-b border-slate-50 last:border-0">
                         <td className="px-5 py-3">
-                          <div className="font-medium text-slate-900">{r.displayName}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-slate-900">{r.displayName}</span>
+                            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${r.kind === 'portfolio' ? 'bg-rose-100 text-rose-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                              {r.kind === 'portfolio' ? 'Portfolio' : 'CV'}
+                            </span>
+                          </div>
                           <div className="text-xs text-slate-400">/cv/{r.username}</div>
                         </td>
                         <td className="hidden px-5 py-3 capitalize text-slate-500 sm:table-cell">{r.templateId}</td>
@@ -507,7 +540,8 @@ export function AdminDashboard() {
             <p className="text-xs leading-5 text-slate-400">
               Analytics are privacy-light: no IPs, no user agents, no fingerprints — just which page was viewed, in which
               mode, and when. Bot traffic is filtered out automatically. “Website visitors” counts home-page sessions
-              (one per browser per day); “CV views” counts public CV and portfolio page loads.
+              (one per browser per day); “CV views” and “Portfolio views” count public page loads, split by the kind of
+              page each link publishes.
             </p>
           </div>
         )}
