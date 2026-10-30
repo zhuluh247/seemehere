@@ -31,8 +31,8 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-  ChevronDown, ChevronUp, CloudCheck, CloudOff, CloudUpload, Eye, EyeOff, FileText, Globe,
-  LayoutTemplate, LogOut, Monitor, Plus, Rocket, Smartphone, Sparkles, UserRound, Wand2, X, PenLine,
+  ArrowRight, ChevronDown, ChevronLeft, ChevronUp, CloudCheck, CloudOff, CloudUpload, Eye, EyeOff, FileText, Globe,
+  LayoutTemplate, LogOut, Monitor, Plus, Rocket, RotateCcw, Smartphone, Sparkles, UserRound, Wand2, X, PenLine,
 } from 'lucide-react'
 import { PORTFOLIO_SECTION_ORDER, type PortfolioSectionKey } from '@/lib/cv/types'
 import { normalizeCv } from '@/lib/cv/types'
@@ -89,7 +89,10 @@ function PreviewFrame({ mobileOverlay = false, onClose }: { mobileOverlay?: bool
 
 // ── start screen ─────────────────────────────────────────────────────────────
 
-function StartScreen({ onLogin }: { onLogin: () => void }) {
+/** R8 · StartScreen doubles as the "choose a different starting point" page:
+ *  when a portfolio is already in progress it shows a Continue card on top
+ *  and asks before replacing it with a different starting point. */
+function StartScreen({ onLogin, hasExisting, existingName, onContinue }: { onLogin: () => void; hasExisting?: boolean; existingName?: string; onContinue?: () => void }) {
   const router = useRouter()
   const startFromCv = usePortfolioStore((s) => s.startFromCv)
   const startScratch = usePortfolioStore((s) => s.startScratch)
@@ -100,6 +103,17 @@ function StartScreen({ onLogin }: { onLogin: () => void }) {
   const user = useAuthStore((s) => s.user)
   const profiles = useAuthStore((s) => s.profiles)
   const fetchMe = useAuthStore((s) => s.fetchMe)
+
+  // R8 · replacing an in-progress portfolio with another starting point
+  // needs one explicit confirmation — the pending action runs on confirm
+  const [replaceOpen, setReplaceOpen] = useState(false)
+  const pendingAction = useRef<(() => void) | null>(null)
+  const guard = (action: () => void) => {
+    if (hasExisting) {
+      pendingAction.current = action
+      setReplaceOpen(true)
+    } else action()
+  }
 
   useEffect(() => {
     void fetchMe()
@@ -121,7 +135,22 @@ function StartScreen({ onLogin }: { onLogin: () => void }) {
       </div>
 
       <div className="mt-8 space-y-4">
-        {/* ── Start from my CV ── */}
+        {/* R8 · resume the in-progress portfolio */}
+        {hasExisting && onContinue && (
+          <button
+            onClick={onContinue}
+            className="flex w-full items-center gap-3 rounded-2xl border-2 border-emerald-300 bg-emerald-50/60 p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white"><Rocket className="h-5 w-5" /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-bold text-slate-900">Continue editing{existingName ? ` — ${existingName}` : ''}</span>
+              <span className="block text-xs text-slate-500">Pick up right where you left off — everything is still here.</span>
+            </span>
+            <span className="shrink-0 rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white">Resume →</span>
+          </button>
+        )}
+
+        {/* Start-from-CV card stays below */}
         <div className="rounded-2xl border-2 border-violet-200 bg-violet-50/40 p-5">
           <div className="flex items-center gap-2.5">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-600 text-white"><Wand2 className="h-5 w-5" /></span>
@@ -134,7 +163,7 @@ function StartScreen({ onLogin }: { onLogin: () => void }) {
           {/* This browser's CV — works for everyone, account or not */}
           {localHasCv && (
             <button
-              onClick={() => startFromCv(localCv, localPhoto)}
+              onClick={() => guard(() => startFromCv(localCv, localPhoto))}
               className="mt-4 flex w-full items-center gap-3 rounded-xl border-2 border-violet-300 bg-white p-3.5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-700"><FileText className="h-5 w-5" /></span>
@@ -155,7 +184,7 @@ function StartScreen({ onLogin }: { onLogin: () => void }) {
               {cvDrafts.map((d: CloudDraft) => (
                 <button
                   key={d.id}
-                  onClick={() => startFromCv(normalizeCv(d.cv), d.photoData || '', `${d.name || 'My CV'} site`)}
+                  onClick={() => guard(() => startFromCv(normalizeCv(d.cv), d.photoData || '', `${d.name || 'My CV'} site`))}
                   className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left transition-all hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-sm"
                 >
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500"><FileText className="h-4.5 w-4.5" /></span>
@@ -192,7 +221,7 @@ function StartScreen({ onLogin }: { onLogin: () => void }) {
         {/* ── Scratch & sample ── */}
         <div className="grid gap-3 sm:grid-cols-2">
           <button
-            onClick={startScratch}
+            onClick={() => guard(startScratch)}
             className="rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-md"
           >
             <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600"><LayoutTemplate className="h-5 w-5" /></span>
@@ -200,7 +229,7 @@ function StartScreen({ onLogin }: { onLogin: () => void }) {
             <span className="mt-1 block text-xs leading-relaxed text-slate-500">Blank canvas — type as you go. Great if your work lives outside a CV.</span>
           </button>
           <button
-            onClick={loadSample}
+            onClick={() => guard(loadSample)}
             className="rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-md"
           >
             <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600"><Sparkles className="h-5 w-5" /></span>
@@ -213,6 +242,37 @@ function StartScreen({ onLogin }: { onLogin: () => void }) {
           Everything saves in this browser automatically. Create a free account to keep drafts in the cloud. · <Link href="/" className="underline hover:text-violet-600">Back to SEEMEHERE</Link>
         </p>
       </div>
+
+      {/* R8 · replace-in-progress confirmation */}
+      <AlertDialog open={replaceOpen} onOpenChange={setReplaceOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Replace your current portfolio?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have a portfolio in progress{existingName ? ` — “${existingName}”` : ''}. Picking a different starting point replaces its content with the new one. Pages you already published are not affected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                pendingAction.current = null
+              }}
+            >
+              Keep my portfolio
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-700 hover:to-indigo-700"
+              onClick={() => {
+                const run = pendingAction.current
+                pendingAction.current = null
+                run?.()
+              }}
+            >
+              Start fresh
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
@@ -226,6 +286,10 @@ export function PortfolioBuilder() {
   const [mobilePreview, setMobilePreview] = useState(false)
   const [loginOpen, setLoginOpen] = useState(false)
   const [exitOpen, setExitOpen] = useState(false)
+  // R8 · wizard navigation + welcome-back flow
+  const [startOverOpen, setStartOverOpen] = useState(false)
+  const [resumeOpen, setResumeOpen] = useState(false)
+  const resumeAsked = useRef(false)
 
   const hydrated = usePortfolioStore((s) => s.hydrated)
   const started = usePortfolioStore((s) => s.started)
@@ -237,6 +301,8 @@ export function PortfolioBuilder() {
   const patchSections = usePortfolioStore((s) => s.patchSections)
   const moveSection = usePortfolioStore((s) => s.moveSection)
   const resetAll = usePortfolioStore((s) => s.resetAll)
+  const unstart = usePortfolioStore((s) => s.unstart)
+  const resume = usePortfolioStore((s) => s.resume)
 
   const user = useAuthStore((s) => s.user)
   const profiles = useAuthStore((s) => s.profiles)
@@ -250,6 +316,42 @@ export function PortfolioBuilder() {
   }, [fetchMe])
 
   const hasContent = cv.contact.fullName.trim().length > 0
+
+  // R8 · does the draft hold real work? Used by the welcome-back prompt and
+  // the start screen's Continue card (name alone is not enough for scratch
+  // users who only typed projects/testimonials so far).
+  const hasWork =
+    hasContent ||
+    portfolio.tagline.trim().length > 0 ||
+    portfolio.about.trim().length > 0 ||
+    portfolio.projects.some((p) => p.title.trim()) ||
+    portfolio.testimonials.some((t) => t.quote.trim()) ||
+    portfolio.gallery.some((g) => g.image)
+
+  // R8 · welcome back — after hydration, if the user returns to a portfolio
+  // in progress, ask: continue editing or start over. Runs once per page load.
+  useEffect(() => {
+    if (!hydrated || resumeAsked.current) return
+    const t = setTimeout(() => {
+      resumeAsked.current = true
+      const st = usePortfolioStore.getState()
+      const rich =
+        st.cv.contact.fullName.trim().length > 0 ||
+        st.portfolio.tagline.trim().length > 0 ||
+        st.portfolio.about.trim().length > 0 ||
+        st.portfolio.projects.some((p) => p.title.trim()) ||
+        st.portfolio.testimonials.some((t2) => t2.quote.trim()) ||
+        st.portfolio.gallery.some((g) => g.image)
+      if (st.started && rich) setResumeOpen(true)
+    }, 700)
+    return () => clearTimeout(t)
+  }, [hydrated])
+
+  // R8 · tab switching with a scroll reset so each step opens at the top
+  const switchTab = (t: Tab) => {
+    setTab(t)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   // Cloud autosave (debounced) — kind "portfolio"
   useEffect(() => {
@@ -314,7 +416,12 @@ export function PortfolioBuilder() {
     return (
       <div className="min-h-screen bg-slate-100">
         <PortfolioTopBar onHome={goHome} saveChip={null} user={user} onLogin={() => setLoginOpen(true)} onLogout={logout} portfolioDrafts={[]} onOpenDraft={undefined} onNew={undefined} />
-        <StartScreen onLogin={() => setLoginOpen(true)} />
+        <StartScreen
+          onLogin={() => setLoginOpen(true)}
+          hasExisting={hasWork}
+          existingName={name && name !== 'My portfolio' ? name : cv.contact.fullName || undefined}
+          onContinue={resume}
+        />
         <LoginModal open={loginOpen} onOpenChange={setLoginOpen} redirectTo="/portfolio" />
       </div>
     )
@@ -336,23 +443,26 @@ export function PortfolioBuilder() {
         }}
       />
 
-      {/* Tab nav */}
+      {/* Tab nav — numbered steps so the order is obvious (R8) */}
       <div className="sticky top-[57px] z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-2">
           {(
             [
-              { id: 'content', label: 'Content', icon: PenLine },
-              { id: 'design', label: 'Design', icon: LayoutTemplate },
-              { id: 'publish', label: 'Publish', icon: Rocket },
+              { id: 'content', n: 1, label: 'Content', icon: PenLine },
+              { id: 'design', n: 2, label: 'Design', icon: LayoutTemplate },
+              { id: 'publish', n: 3, label: 'Publish', icon: Rocket },
             ] as const
           ).map((t) => (
             <button
               key={t.id}
-              onClick={() => setTab(t.id)}
+              onClick={() => switchTab(t.id)}
               className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
                 tab === t.id ? 'border-violet-600 bg-violet-600 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
               }`}
             >
+              <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-black ${tab === t.id ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                {t.n}
+              </span>
               <t.icon className="h-3.5 w-3.5" /> {t.label}
             </button>
           ))}
@@ -435,6 +545,39 @@ export function PortfolioBuilder() {
                 <PublishPanel />
               </div>
             )}
+
+            {/* R8 · wizard navigation — explicit Back / Next on every step,
+                so nobody has to guess that the tabs above are the way forward */}
+            <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+              {tab === 'content' ? (
+                <button
+                  onClick={() => setStartOverOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-3.5 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" /> Start over
+                </button>
+              ) : (
+                <button
+                  onClick={() => switchTab(tab === 'design' ? 'content' : 'design')}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-3.5 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" /> Back
+                </button>
+              )}
+              <span className="hidden text-[11px] font-medium text-slate-400 sm:block">
+                Step {tab === 'content' ? 1 : tab === 'design' ? 2 : 3} of 3
+              </span>
+              {tab !== 'publish' ? (
+                <Button
+                  onClick={() => switchTab(tab === 'content' ? 'design' : 'publish')}
+                  className="h-8 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-xs text-white hover:from-violet-700 hover:to-indigo-700"
+                >
+                  Next: {tab === 'content' ? 'Design' : 'Publish'} <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                </Button>
+              ) : (
+                <span className="text-[11px] font-semibold text-emerald-600">Final step — publish below 🎉</span>
+              )}
+            </div>
           </section>
 
           {/* Right: live preview (desktop) */}
@@ -489,12 +632,66 @@ export function PortfolioBuilder() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* R8 · Start over → back to the starting-point screen (content kept
+          until the user actively picks a different start; the start screen
+          shows a Continue card so this is always reversible) */}
+      <AlertDialog open={startOverOpen} onOpenChange={setStartOverOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Go back to the starting options?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You&apos;ll see the three starting points again (your CV, scratch, sample). Nothing is deleted — your current portfolio stays saved, and the next screen has a &ldquo;Continue editing&rdquo; button to come right back.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep building</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-700 hover:to-indigo-700"
+              onClick={() => {
+                setStartOverOpen(false)
+                unstart()
+                window.scrollTo({ top: 0 })
+              }}
+            >
+              Show starting options
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* R8 · Welcome back — returning to a portfolio in progress */}
+      <AlertDialog open={resumeOpen} onOpenChange={setResumeOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Welcome back!</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have a portfolio in progress{name && name !== 'My portfolio' ? ` — “${name}”` : ''} saved {user ? 'to your account' : 'in this browser'}. Continue editing it, or start something new.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
+            <AlertDialogAction
+              className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-700 hover:to-indigo-700"
+              onClick={() => setResumeOpen(false)}
+            >
+              Continue editing
+            </AlertDialogAction>
+            <AlertDialogCancel
+              className="w-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+              onClick={() => {
+                setResumeOpen(false)
+                unstart()
+              }}
+            >
+              Start over with a different starting point
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <LoginModal open={loginOpen} onOpenChange={setLoginOpen} redirectTo="/portfolio" />
     </div>
   )
 }
-
-// ── shared top bar ───────────────────────────────────────────────────────────
 
 function PortfolioTopBar({
   onHome, saveChip, user, onLogin, onLogout, portfolioDrafts, onOpenDraft, onNew,

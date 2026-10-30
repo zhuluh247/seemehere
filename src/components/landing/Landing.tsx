@@ -425,7 +425,10 @@ export function Landing() {
                 ))}
               </div>
             ) : (
-              <div className="land-reveal grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              /* No .land-reveal here: tab switching remounts this grid after the
+                 scroll-reveal observer has run, so the reveal class never clears
+                 and the gallery would stay invisible. The header above still reveals. */
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 {PF_ALL_STYLES.map((s) => (
                   <div key={s.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
                     <PfMock id={s.id} accent="#4F46E5" />

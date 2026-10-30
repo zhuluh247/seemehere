@@ -35,6 +35,9 @@ export function Builder() {
   const [mobilePreview, setMobilePreview] = useState(false)
   const [loginOpen, setLoginOpen] = useState(false)
   const [exitOpen, setExitOpen] = useState(false)
+  // R8 · welcome-back prompt — shown once per page load when a CV is in progress
+  const [resumeOpen, setResumeOpen] = useState(false)
+  const resumeAsked = useRef(false)
   const hydrated = useCvStore((s) => s.hydrated)
   const cv = useCvStore((s) => s.cv)
   const design = useCvStore((s) => s.design)
@@ -69,6 +72,27 @@ export function Builder() {
   useEffect(() => {
     void fetchMe()
   }, [fetchMe])
+
+  // R8 · welcome back — a moment after hydration (so signed-in users' cloud
+  // bootstrap has had a chance to fill the editor), if the CV holds real work,
+  // ask: continue editing or start a new one. Runs once per page load.
+  useEffect(() => {
+    if (!hydrated || resumeAsked.current) return
+    const t = setTimeout(() => {
+      resumeAsked.current = true
+      const c = useCvStore.getState().cv
+      const rich = !!(
+        c.contact.fullName.trim() ||
+        c.summary.trim() ||
+        c.experience.length > 0 ||
+        c.education.length > 0 ||
+        c.projects.length > 0 ||
+        c.skills.length > 0
+      )
+      if (rich) setResumeOpen(true)
+    }, 700)
+    return () => clearTimeout(t)
+  }, [hydrated])
 
   // If signed in with cloud profiles but this browser has an empty CV → open most recent profile
   const bootstrapDone = useRef(false)
@@ -314,6 +338,37 @@ export function Builder() {
                 Leave anyway
               </AlertDialogAction>
             </div>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* R8 · Welcome back — returning to a CV in progress */}
+      <AlertDialog open={resumeOpen} onOpenChange={setResumeOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Welcome back!</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have a CV in progress{cv.contact.fullName.trim() ? ` — “${cv.contact.fullName.trim()}”` : ''} saved {user ? 'to your account' : 'in this browser'}. Continue editing it, or start a new one
+              {user ? ' — your saved profiles stay untouched and you can switch back anytime from the menu.' : '. Starting fresh clears the copy in this browser — export a PDF first if you want to keep it.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
+            <AlertDialogAction
+              className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-700 hover:to-indigo-700"
+              onClick={() => setResumeOpen(false)}
+            >
+              Continue editing
+            </AlertDialogAction>
+            <AlertDialogCancel
+              className="w-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+              onClick={() => {
+                resetAll()
+                useAuthStore.getState().setActiveProfileId(null)
+                setStep('template')
+              }}
+            >
+              Start a new CV
+            </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

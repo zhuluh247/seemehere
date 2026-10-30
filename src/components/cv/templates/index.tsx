@@ -120,12 +120,14 @@ const PAGE_HEIGHT = 1123 // A4 screen px at 96dpi (210mm × 297mm → 794×1123)
    Every template tags its flow units with well-known classes; the selector
    list below is the single source of truth. Entries (second group) are only
    used to split a section that is taller than a full A4 page. Untagged zones
-   (Modern's sidebar, Vertex's color rail) repeat on every page by design. */
+   (Vertex's color rail) repeat on every page by design; Modern's sidebar band
+   repeats too but templates.css empties its content on pages 2+. */
 
 const BLOCK_SEL = [
   // classic
   '.cl-hdr', '.cl-dbl', '.cl-sec', '.cl-entry',
-  // modern (main column only — sidebar repeats on every page)
+  // modern (main column only — the colored sidebar band repeats on every
+  // page, with its content emptied on pages 2+ by templates.css)
   '.md-name2', '.md-role2', '.md-rule', '.md-sec2', '.md-xp',
   // minimal / executive / creative / compact
   '.mn-hdr', '.mn-sec', '.mn-xp',

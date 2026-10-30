@@ -61,6 +61,14 @@
    so page 2+ starts flush with the template padding (see CvPages in index.tsx) */
 .cv-page .cvb-first { margin-top: 0 !important; }
 
+/* R8 · Modern (template 2): on pages 2+ the sidebar keeps only its colored
+   band — the contact/skills/languages content belongs to page 1. The band
+   still fills the page because .tpl-modern stretches flex children, and the
+   white main column continues the CV details from the previous page. */
+.cv-page-viewport[data-page-index]:not([data-page-index="0"]) .md-side > * {
+  display: none !important;
+}
+
 .cv-photo-initials {
   display: flex;
   align-items: center;

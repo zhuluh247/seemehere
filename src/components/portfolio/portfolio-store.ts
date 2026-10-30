@@ -28,6 +28,11 @@ interface PortfolioState {
   startScratch: () => void
   loadSample: () => void
   hydrateDraft: (d: { id?: string; name?: string; cv: unknown; portfolio: unknown; photoData?: string }) => void
+  /** R8 · go back to the start/options screen WITHOUT wiping content —
+   *  the start screen then offers "Continue editing" plus the three starts */
+  unstart: () => void
+  /** R8 · come back into the editor with the stored content intact */
+  resume: () => void
   resetAll: () => void
 
   setContactField: (field: keyof CvData['contact'], value: string) => void
@@ -113,6 +118,10 @@ export const usePortfolioStore = create<PortfolioState>()(
           photoData: d.photoData || '',
           activeDraftId: d.id || null,
         }),
+
+      unstart: () => set({ started: false }),
+
+      resume: () => set({ started: true }),
 
       resetAll: () =>
         set({
