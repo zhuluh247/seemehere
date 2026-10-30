@@ -159,7 +159,14 @@ export interface GalleryItem {
   caption: string
 }
 
-export type PortfolioLayout = 'signature' | 'horizon' | 'spotlight'
+// R7: 15 portfolio layouts — the 3 R5 originals stay renderable for backward
+// compatibility. R6 added the GenZ six; R7 adds 3 professional styles and 3
+// beautiful ones, so every taste from boardroom to art school is covered.
+export type PortfolioLayout =
+  | 'signature' | 'horizon' | 'spotlight' // originals (legacy, still rendered)
+  | 'aura' | 'riot' | 'editorial' | 'terminal' | 'bento' | 'vogue' // GenZ six (R6)
+  | 'atelier' | 'monolith' | 'meridian' // professional three (R7)
+  | 'noir' | 'lagoon' | 'bloom' // beautiful three (R7)
 
 export const PORTFOLIO_LAYOUTS: { id: PortfolioLayout; name: string; blurb: string }[] = [
   { id: 'signature', name: 'Signature', blurb: 'Centered hero · soft glow' },
@@ -167,32 +174,91 @@ export const PORTFOLIO_LAYOUTS: { id: PortfolioLayout; name: string; blurb: stri
   { id: 'spotlight', name: 'Spotlight', blurb: 'Editorial · big type, minimal' },
 ]
 
+/** The 6 headline GenZ styles (R6) — shown first in the portfolio builder */
+export const PORTFOLIO_STYLES: { id: PortfolioLayout; name: string; blurb: string; vibe: string }[] = [
+  { id: 'aura', name: 'Aura', blurb: 'Gradient glow · glass cards', vibe: 'the aesthetic one' },
+  { id: 'riot', name: 'Riot', blurb: 'Neobrutalism · stickers & shadows', vibe: 'the loud one' },
+  { id: 'editorial', name: 'Editorial', blurb: 'Magazine serif · numbered sections', vibe: 'the writer one' },
+  { id: 'terminal', name: 'Terminal', blurb: 'Monospace · dark dev console', vibe: 'the dev one' },
+  { id: 'bento', name: 'Bento', blurb: 'Bento grid · image-forward tiles', vibe: 'the creator one' },
+  { id: 'vogue', name: 'Vogue', blurb: 'Luxe minimal · thin rules', vibe: 'the elegant one' },
+]
+
+/** R7 · The professional three — boardroom-grade, for serious portfolios */
+export const PORTFOLIO_PRO_STYLES: { id: PortfolioLayout; name: string; blurb: string; vibe: string }[] = [
+  { id: 'atelier', name: 'Atelier', blurb: 'Studio minimal · ivory & serif', vibe: 'the refined one' },
+  { id: 'monolith', name: 'Monolith', blurb: 'Bold corporate · oversized type', vibe: 'the executive one' },
+  { id: 'meridian', name: 'Meridian', blurb: 'Clean consulting · structured', vibe: 'the polished one' },
+]
+
+/** R7 · The beautiful three — pure visual atmosphere */
+export const PORTFOLIO_LUXE_STYLES: { id: PortfolioLayout; name: string; blurb: string; vibe: string }[] = [
+  { id: 'noir', name: 'Noir', blurb: 'Black & gold · quiet luxury', vibe: 'the cinematic one' },
+  { id: 'lagoon', name: 'Lagoon', blurb: 'Aqua calm · flowing waves', vibe: 'the serene one' },
+  { id: 'bloom', name: 'Bloom', blurb: 'Soft botanical · garden pastels', vibe: 'the graceful one' },
+]
+
+export const PORTFOLIO_ALL_LAYOUTS: PortfolioLayout[] = [
+  ...PORTFOLIO_STYLES.map((s) => s.id),
+  ...PORTFOLIO_PRO_STYLES.map((s) => s.id),
+  ...PORTFOLIO_LUXE_STYLES.map((s) => s.id),
+  ...PORTFOLIO_LAYOUTS.map((l) => l.id),
+]
+
+/** Orderable portfolio sections (hero is always first, footer always last) */
+export type PortfolioSectionKey = 'about' | 'projects' | 'experience' | 'education' | 'skills' | 'testimonials' | 'gallery' | 'contact'
+export const PORTFOLIO_SECTION_ORDER: PortfolioSectionKey[] = ['about', 'projects', 'experience', 'education', 'skills', 'testimonials', 'gallery', 'contact']
+
+export type PortfolioRadius = 'sharp' | 'round' | 'pill'
+export type PortfolioTexture = 'plain' | 'grid' | 'dots' | 'blobs'
+export type PortfolioFont = 'sans' | 'serif' | 'mono' | 'grotesk'
+
+/** R7 · Animation level for the whole page (optional token, older data = off) */
+export type PortfolioMotion = 'off' | 'subtle' | 'rich'
+export const PORTFOLIO_MOTIONS: { id: PortfolioMotion; name: string; blurb: string }[] = [
+  { id: 'off', name: 'None', blurb: 'Perfectly still — a printed page' },
+  { id: 'subtle', name: 'Subtle', blurb: 'Sections fade in as you scroll' },
+  { id: 'rich', name: 'Rich', blurb: 'Reveals + hero entrance + hover lifts' },
+]
+
+export const PORTFOLIO_FONT_STACKS: Record<PortfolioFont, string> = {
+  sans: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+  serif: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
+  mono: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace',
+  grotesk: '"Space Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif',
+}
+
+export const PORTFOLIO_RADIUS_PX: Record<PortfolioRadius, string> = {
+  sharp: '0px',
+  round: '16px',
+  pill: '28px',
+}
+
 export interface PortfolioSpec {
   enabled: boolean
   mode: 'light' | 'dark'
-  layout: PortfolioLayout // website template (R5)
+  layout: PortfolioLayout // website template (R5 originals + R6 GenZ six)
   accent: string
   tagline: string // hero subtitle (defaults to job title)
   about: string // defaults to CV summary when empty
-  sections: {
-    about: boolean
-    projects: boolean
-    experience: boolean
-    education: boolean
-    skills: boolean
-    contact: boolean
-    testimonials: boolean
-    gallery: boolean
-  }
+  sections: Record<PortfolioSectionKey, boolean>
   projects: PortfolioProject[]
   testimonials: TestimonialItem[]
   gallery: GalleryItem[]
+  // ── R6 design tokens (all optional so older saved data stays valid) ──
+  font?: PortfolioFont // type personality (undefined = style's own default)
+  radius?: PortfolioRadius // corner personality (sharp/round/pill)
+  texture?: PortfolioTexture // background texture (plain/grid/dots/blobs)
+  marquee?: string // scrolling ribbon text, '' = off
+  badge?: string // hero availability chip, '' = hidden
+  sectionOrder?: PortfolioSectionKey[] // custom section order
+  motion?: PortfolioMotion // R7 animation level (undefined/legacy = off)
 }
 
 export const emptyPortfolio = (): PortfolioSpec => ({
   enabled: false,
   mode: 'light',
-  layout: 'signature',
+  layout: 'aura',
   accent: '#4F46E5',
   tagline: '',
   about: '',
@@ -200,6 +266,12 @@ export const emptyPortfolio = (): PortfolioSpec => ({
   projects: [],
   testimonials: [],
   gallery: [],
+  radius: 'round',
+  texture: 'plain',
+  marquee: '',
+  badge: '',
+  sectionOrder: [],
+  motion: 'subtle', // new portfolios start with tasteful motion; legacy data (no field) stays off
 })
 
 export interface PublishedInfo {
@@ -227,22 +299,25 @@ export const emptyCv = (): CvData => ({
   customSections: [],
 })
 
-/** Upgrade older saved CVs (pre-projects / pre-links) so old browsers don't break */
+/** Upgrade older saved CVs (pre-projects / pre-links) so old browsers don't break.
+ *  R6: also repairs missing entry ids so React keys are always stable. */
 export function normalizeCv(raw: unknown): CvData {
   const base = emptyCv()
   if (!raw || typeof raw !== 'object') return base
   const cv = raw as Partial<CvData>
   const contact = { ...base.contact, ...(cv.contact || {}) }
   if (!Array.isArray(contact.links)) contact.links = []
+  const withIds = <T extends { id?: string }>(list: unknown): T[] =>
+    Array.isArray(list) ? list.filter(Boolean).map((x) => ({ ...(x as T), id: (x as T).id || uid() })) : []
   return {
     contact,
     summary: typeof cv.summary === 'string' ? cv.summary : '',
-    experience: Array.isArray(cv.experience) ? cv.experience : [],
-    education: Array.isArray(cv.education) ? cv.education : [],
-    projects: Array.isArray(cv.projects) ? cv.projects : [],
-    skills: Array.isArray(cv.skills) ? cv.skills : [],
-    certifications: Array.isArray(cv.certifications) ? cv.certifications : [],
-    languages: Array.isArray(cv.languages) ? cv.languages : [],
+    experience: withIds<ExperienceItem>(cv.experience),
+    education: withIds<EducationItem>(cv.education),
+    projects: withIds<ProjectItem>(cv.projects),
+    skills: withIds<SkillItem>(cv.skills),
+    certifications: withIds<CertItem>(cv.certifications),
+    languages: withIds<LanguageItem>(cv.languages),
     sectionOrder: Array.isArray(cv.sectionOrder)
       ? cv.sectionOrder.filter((k): k is string => typeof k === 'string')
       : [],
@@ -255,17 +330,7 @@ export function normalizeCv(raw: unknown): CvData {
           return {
             id: typeof cs.id === 'string' && cs.id ? cs.id : uid(),
             name: typeof cs.name === 'string' ? cs.name : '',
-            items: Array.isArray(cs.items)
-              ? cs.items.map((rawIt) => {
-                  const it = (rawIt || {}) as Partial<CustomSectionItem>
-                  return {
-                    id: typeof it.id === 'string' && it.id ? it.id : uid(),
-                    title: typeof it.title === 'string' ? it.title : '',
-                    subtitle: typeof it.subtitle === 'string' ? it.subtitle : '',
-                    body: typeof it.body === 'string' ? it.body : '',
-                  }
-                })
-              : [],
+            items: withIds<CustomSectionItem>(cs.items),
           }
         })
       : [],
@@ -277,17 +342,36 @@ export function normalizePortfolio(raw: unknown): PortfolioSpec {
   const base = emptyPortfolio()
   if (!raw || typeof raw !== 'object') return base
   const p = raw as Partial<PortfolioSpec>
+  const RADII: PortfolioRadius[] = ['sharp', 'round', 'pill']
+  const TEXTURES: PortfolioTexture[] = ['plain', 'grid', 'dots', 'blobs']
+  const FONTS: PortfolioFont[] = ['sans', 'serif', 'mono', 'grotesk']
+  const MOTIONS: PortfolioMotion[] = ['off', 'subtle', 'rich']
   return {
     enabled: !!p.enabled,
     mode: p.mode === 'dark' ? 'dark' : 'light',
-    layout: (PORTFOLIO_LAYOUTS.some((l) => l.id === p.layout) ? p.layout : 'signature') as PortfolioLayout,
+    layout: (PORTFOLIO_ALL_LAYOUTS.includes(p.layout as PortfolioLayout) ? p.layout : 'aura') as PortfolioLayout,
     accent: typeof p.accent === 'string' ? p.accent : base.accent,
     tagline: typeof p.tagline === 'string' ? p.tagline : '',
     about: typeof p.about === 'string' ? p.about : '',
     sections: { ...base.sections, ...(p.sections || {}) },
-    projects: Array.isArray(p.projects) ? p.projects : [],
-    testimonials: Array.isArray(p.testimonials) ? p.testimonials : [],
-    gallery: Array.isArray(p.gallery) ? p.gallery : [],
+    projects: Array.isArray(p.projects)
+      ? p.projects.map((x) => ({ ...(x || ({} as PortfolioProject)), id: (x as PortfolioProject)?.id || uid() }))
+      : [],
+    testimonials: Array.isArray(p.testimonials)
+      ? p.testimonials.map((x) => ({ ...(x || ({} as TestimonialItem)), id: (x as TestimonialItem)?.id || uid() }))
+      : [],
+    gallery: Array.isArray(p.gallery)
+      ? p.gallery.map((x) => ({ ...(x || ({} as GalleryItem)), id: (x as GalleryItem)?.id || uid() }))
+      : [],
+    font: (FONTS.includes(p.font as PortfolioFont) ? p.font : undefined) as PortfolioFont | undefined,
+    radius: (RADII.includes(p.radius as PortfolioRadius) ? p.radius : base.radius) as PortfolioRadius,
+    texture: (TEXTURES.includes(p.texture as PortfolioTexture) ? p.texture : base.texture) as PortfolioTexture,
+    marquee: typeof p.marquee === 'string' ? p.marquee : '',
+    badge: typeof p.badge === 'string' ? p.badge : '',
+    motion: (MOTIONS.includes(p.motion as PortfolioMotion) ? p.motion : 'off') as PortfolioMotion,
+    sectionOrder: Array.isArray(p.sectionOrder)
+      ? (p.sectionOrder.filter((k): k is PortfolioSectionKey => typeof k === 'string' && (PORTFOLIO_SECTION_ORDER as string[]).includes(k)))
+      : [],
   }
 }
 
