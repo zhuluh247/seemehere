@@ -1,0 +1,70 @@
+SEEMEHERE — R8 · FULL COMPLETE PROJECT ZIP
+==========================================
+
+Same idea as last time: this is the ENTIRE project — every file, whole and
+in sync. Copy it over your folder and nothing can go missing.
+
+WHAT'S FIXED / NEW IN R8
+------------------------
+1. Landing page → Templates → "Portfolio styles · 15" tab showed an empty
+   white area. Fixed — all style cards now appear when you switch tabs.
+2. Portfolio builder now has proper step navigation:
+   - Tabs are numbered 1 Content · 2 Design · 3 Publish.
+   - Every step has a big "Next: …" button and a "Back" button at the
+     bottom, so nobody has to guess.
+   - Content step also has "Start over" → returns to the starting-options
+     screen (your CV / scratch / sample). Nothing is deleted — that screen
+     now shows a green "Continue editing" card to come right back, and it
+     asks for confirmation before replacing anything.
+3. Welcome back! Both builders (CV and Portfolio) now remember you:
+   if you leave and come back, they ask "Continue editing — {name}?" or
+   "Start a new one" instead of silently dropping you into old work.
+   (For anonymous users it's the copy saved in the browser; for signed-in
+   users it's your account draft. Saved profiles are never deleted.)
+4. Modern CV template (template 2) multi-page fix: on page 2, 3, … the
+   left sidebar now shows ONLY the colored band — contacts, skills and
+   languages appear on page 1, and the white body continues the details
+   from the previous page. Works in the live preview, the published page
+   and the PDF/PNG exports.
+
+Everything from R7 is included (6 new portfolio styles, animations
+option, mobile hardening, animated landing, quiet Sign in, "20+ templates").
+
+NOT included on purpose (to protect YOUR local data):
+- .env and db/ — your existing files stay untouched. Keep them!
+- node_modules/ (restored by npm install) and .next/ (rebuilt)
+
+
+HOW TO APPLY (2 minutes)
+------------------------
+1. Unzip this file.
+2. Copy EVERYTHING inside it over your project folder. "Replace" when asked.
+   → Do NOT delete your .env or db/ folder — they're not in this zip.
+3. In the terminal, inside your project folder:
+
+     npm install
+     npx prisma generate
+
+4. Start it:
+
+     npm run dev
+
+5. Open http://localhost:3000 and hard-refresh (Ctrl+Shift+R).
+
+No database migration, no SQL, nothing manual — this release changed NO
+database schema.
+
+
+DEPLOYING (Render — unchanged flow)
+-----------------------------------
+     git add -A
+     git commit -m "R8: landing gallery fix, builder wizard + welcome back, modern template multipage fix"
+     git push
+
+Render detects the commit and auto-deploys. Nothing to click.
+
+
+IF SOMETHING LOOKS OFF
+----------------------
+- 404 or stale page? Hard-refresh (Ctrl+Shift+R), or restart npm run dev.
+- "Module not found"? npm install again inside the project folder.
