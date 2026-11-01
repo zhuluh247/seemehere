@@ -283,3 +283,27 @@
     animation: land-drift 16s ease-in-out infinite alternate;
   }
 }
+
+/* ─── R9 · Site nav drawer + gallery lightbox ───────────────────────────── */
+/* The hamburger drawer slides in from the right and the overlay fades; the
+   lightbox pops the tapped gallery image up. Both live OUTSIDE the motion
+   token system: they are interface transitions (menus/modals), so they run
+   for everyone except prefers-reduced-motion users, who get instant state. */
+@keyframes pf-drawer-in {
+  from { transform: translateX(40px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+@keyframes pf-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes pf-pop-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pf-drawer-panel { animation: pf-drawer-in 0.28s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+  .pf-drawer-overlay { animation: pf-fade-in 0.25s ease both; }
+  .pf-lightbox { animation: pf-fade-in 0.2s ease both; }
+  .pf-lightbox figure { animation: pf-pop-in 0.28s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+}

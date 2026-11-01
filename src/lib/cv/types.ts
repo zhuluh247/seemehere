@@ -209,6 +209,20 @@ export const PORTFOLIO_ALL_LAYOUTS: PortfolioLayout[] = [
 export type PortfolioSectionKey = 'about' | 'projects' | 'experience' | 'education' | 'skills' | 'testimonials' | 'gallery' | 'contact'
 export const PORTFOLIO_SECTION_ORDER: PortfolioSectionKey[] = ['about', 'projects', 'experience', 'education', 'skills', 'testimonials', 'gallery', 'contact']
 
+/** R9 · Visitor-facing menu labels for the site navbar (desktop bar + mobile
+ *  hamburger drawer). "Kind words" reads better on a website than
+ *  "Testimonials"; the builder keeps its own friendlier SECTION_META. */
+export const PORTFOLIO_SECTION_LABELS: Record<PortfolioSectionKey, string> = {
+  about: 'About',
+  projects: 'Projects',
+  experience: 'Experience',
+  education: 'Education',
+  skills: 'Skills',
+  testimonials: 'Kind words',
+  gallery: 'Gallery',
+  contact: 'Contact',
+}
+
 export type PortfolioRadius = 'sharp' | 'round' | 'pill'
 export type PortfolioTexture = 'plain' | 'grid' | 'dots' | 'blobs'
 export type PortfolioFont = 'sans' | 'serif' | 'mono' | 'grotesk'
@@ -253,6 +267,10 @@ export interface PortfolioSpec {
   badge?: string // hero availability chip, '' = hidden
   sectionOrder?: PortfolioSectionKey[] // custom section order
   motion?: PortfolioMotion // R7 animation level (undefined/legacy = off)
+  // ── R9 site structure tokens (all optional, ride inside the same JSON) ──
+  homeSections?: PortfolioSectionKey[] // R9 · which visible sections live on the
+  //    homepage. undefined / empty = ALL sections on home (legacy one-pager);
+  //    sections left out get their own page, reached from the site menu.
 }
 
 export const emptyPortfolio = (): PortfolioSpec => ({
@@ -372,6 +390,9 @@ export function normalizePortfolio(raw: unknown): PortfolioSpec {
     sectionOrder: Array.isArray(p.sectionOrder)
       ? (p.sectionOrder.filter((k): k is PortfolioSectionKey => typeof k === 'string' && (PORTFOLIO_SECTION_ORDER as string[]).includes(k)))
       : [],
+    homeSections: Array.isArray(p.homeSections)
+      ? (p.homeSections.filter((k): k is PortfolioSectionKey => typeof k === 'string' && (PORTFOLIO_SECTION_ORDER as string[]).includes(k)))
+      : undefined,
   }
 }
 

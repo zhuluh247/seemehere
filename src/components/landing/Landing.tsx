@@ -199,7 +199,7 @@ export function Landing() {
 
   const pfFeatures = [
     { icon: <Palette className="h-5 w-5" />, title: '15 portfolio styles', text: 'GenZ (Aura, Riot, Terminal…), professional (Atelier, Monolith, Meridian) and beautiful (Noir, Lagoon, Bloom). Dark mode, accents, textures — and optional animations.' },
-    { icon: <Globe2 className="h-5 w-5" />, title: 'Your own link', text: 'Publish at seemehere…/cv/yourname. Project cards with images, testimonials, gallery, contact — your name is the brand.' },
+    { icon: <Globe2 className="h-5 w-5" />, title: 'A real website, not a page', text: 'Menu bar on every style, hamburger navigation on phones, and your own multi-page structure — pick which sections live on the homepage and give the rest their own page.' },
     { icon: <Wand2 className="h-5 w-5" />, title: 'Starts from your CV', text: 'One tap imports everything you already built. Registered users pick from any saved CV; everyone else, we find it in your browser.' },
   ]
 
@@ -207,7 +207,7 @@ export function Landing() {
     { feature: 'Price', us: 'Free forever — every template, every export', them: 'Free to build, paid to download' },
     { feature: 'Watermark on your documents', us: 'Never', them: 'Watermark until you upgrade' },
     { feature: 'PDF, PNG, Word & TXT exports', us: 'Unlimited, unwatermarked', them: 'PDF locked behind a plan' },
-    { feature: 'Portfolio website included', us: 'Yes — 15 styles + animations, your own link', them: 'Not offered, or a separate product' },
+    { feature: 'Portfolio website included', us: 'Yes — 15 styles, site menus, animations, your own link', them: 'Not offered, or a separate product' },
     { feature: 'AI writing, job match & scoring', us: 'Included', them: 'Premium add-on' },
     { feature: 'Account required', us: 'No — build instantly', them: 'Signup wall before you start' },
   ]

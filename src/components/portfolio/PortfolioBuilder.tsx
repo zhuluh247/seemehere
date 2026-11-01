@@ -31,9 +31,10 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-  ArrowRight, ChevronDown, ChevronLeft, ChevronUp, CloudCheck, CloudOff, CloudUpload, Eye, EyeOff, FileText, Globe,
+  ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CloudCheck, CloudOff, CloudUpload, Eye, EyeOff, FileText, Globe, Home,
   LayoutTemplate, LogOut, Monitor, Plus, Rocket, RotateCcw, Smartphone, Sparkles, UserRound, Wand2, X, PenLine,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { PORTFOLIO_SECTION_ORDER, type PortfolioSectionKey } from '@/lib/cv/types'
 import { normalizeCv } from '@/lib/cv/types'
 import { DEFAULT_PALETTE } from '@/lib/cv/palettes'
@@ -78,8 +79,15 @@ function PreviewFrame({ mobileOverlay = false, onClose }: { mobileOverlay?: bool
           )}
         </div>
       </div>
-      <div ref={wrapRef} className="flex-1 overflow-auto rounded-b-xl border border-t-0 border-slate-200 bg-slate-200/60 p-3">
-        <div style={{ width: simWidth, zoom: scale }} className="overflow-hidden rounded-lg shadow-xl">
+      {/* pf-viewport = the site's scroll container inside the builder — the
+          R9 scroll-spy and view switching target it (falls back to the window
+          on live pages where it doesn't exist) */}
+      <div ref={wrapRef} className="pf-viewport flex-1 overflow-auto rounded-b-xl border border-t-0 border-slate-200 bg-slate-200/60 p-3">
+        {/* translateZ(0) makes this box the containing block for the site's
+            fixed drawer/lightbox layers, so in the builder preview they stay
+            INSIDE the simulated device instead of covering the whole editor.
+            On the live page there is no transform — real fixed positioning. */}
+        <div style={{ width: simWidth, zoom: scale, transform: 'translateZ(0)' }} className="overflow-hidden rounded-lg shadow-xl">
           <PortfolioSite data={cv} photoData={photoData || undefined} portfolio={portfolio} preview />
         </div>
       </div>
@@ -283,6 +291,7 @@ export function PortfolioBuilder() {
   const router = useRouter()
   const [tab, setTab] = useState<Tab>('content')
   const [openSection, setOpenSection] = useState<PortfolioSectionKey>('about')
+  const editorRef = useRef<HTMLDivElement>(null) // R9 · walk-through scrolls here
   const [mobilePreview, setMobilePreview] = useState(false)
   const [loginOpen, setLoginOpen] = useState(false)
   const [exitOpen, setExitOpen] = useState(false)
@@ -299,6 +308,7 @@ export function PortfolioBuilder() {
   const photoData = usePortfolioStore((s) => s.photoData)
   const publishInfo = usePortfolioStore((s) => s.publishInfo)
   const patchSections = usePortfolioStore((s) => s.patchSections)
+  const patchPortfolio = usePortfolioStore((s) => s.patchPortfolio)
   const moveSection = usePortfolioStore((s) => s.moveSection)
   const resetAll = usePortfolioStore((s) => s.resetAll)
   const unstart = usePortfolioStore((s) => s.unstart)
@@ -351,6 +361,44 @@ export function PortfolioBuilder() {
   const switchTab = (t: Tab) => {
     setTab(t)
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // ── R9 · Content tab helpers ───────────────────────────────────────────────
+  // per-section fill status — drives the list dots and the progress chip
+  const sectionFilled: Record<PortfolioSectionKey, boolean> = {
+    about: !!(portfolio.tagline.trim() || portfolio.about.trim() || cv.summary.trim()),
+    projects: portfolio.projects.some((x) => x.title.trim() || x.image),
+    experience: cv.experience.length > 0,
+    education: cv.education.length > 0,
+    skills: cv.skills.length > 0,
+    testimonials: portfolio.testimonials.some((x) => x.quote.trim()),
+    gallery: portfolio.gallery.some((x) => x.image),
+    contact: !!(cv.contact.fullName.trim() || cv.contact.email.trim() || cv.contact.phone.trim()),
+  }
+  const filledCount = PORTFOLIO_SECTION_ORDER.filter((k) => sectionFilled[k]).length
+
+  // ⌂ homepage toggle — undefined/empty homeSections means "all sections on
+  // home" (pre-R9 behaviour), so the first toggle materializes the full list
+  const toggleHome = (key: PortfolioSectionKey) => {
+    if (!portfolio.sections[key]) return
+    const current =
+      portfolio.homeSections && portfolio.homeSections.length > 0
+        ? portfolio.homeSections
+        : [...PORTFOLIO_SECTION_ORDER]
+    const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key]
+    if (next.length === 0) {
+      toast.error('Keep at least one section on the homepage — every visible section still shows in the site menu.')
+      return
+    }
+    patchPortfolio({ homeSections: next })
+  }
+
+  // guided walk-through — Prev/Next walks the sections in site order; the
+  // primary button only becomes "Next: Design" after the last section
+  const gotoSection = (idx: number) => {
+    const clamped = Math.max(0, Math.min(PORTFOLIO_SECTION_ORDER.length - 1, idx))
+    setOpenSection(PORTFOLIO_SECTION_ORDER[clamped])
+    requestAnimationFrame(() => editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }
 
   // Cloud autosave (debounced) — kind "portfolio"
@@ -486,24 +534,66 @@ export function PortfolioBuilder() {
           <section>
             {tab === 'content' && (
               <div className="space-y-3">
-                {/* Sections list */}
+                {/* Sections list — R9: fill dots, ⌂ homepage picker and an
+                    unmistakable Edit button (users kept missing that the rows
+                    were clickable and thought hide/reorder was all there was) */}
                 <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-                  <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Website sections — drag-free reorder, eye to hide</p>
+                  <div className="mb-1.5 flex items-center justify-between gap-2 px-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Website sections</p>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        filledCount === PORTFOLIO_SECTION_ORDER.length ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
+                      {filledCount} of {PORTFOLIO_SECTION_ORDER.length} filled
+                    </span>
+                  </div>
+                  <p className="mb-2 px-1 text-[10.5px] leading-relaxed text-slate-400">
+                    Tap a section (or <b className="font-semibold text-slate-500">Edit</b>) to write it ·{' '}
+                    <Home className="inline h-3 w-3 -translate-y-px" /> picks homepage sections ·{' '}
+                    <Eye className="inline h-3 w-3 -translate-y-px" /> show/hide ·{' '}
+                    <ChevronUp className="inline h-3 w-3 -translate-y-px" />
+                    <ChevronDown className="inline h-3 w-3 -translate-y-px" /> orders the site menu
+                  </p>
                   <div className="grid gap-1 sm:grid-cols-2">
                     {PORTFOLIO_SECTION_ORDER.map((key, i) => {
                       const visible = portfolio.sections[key]
                       const active = openSection === key
+                      const onHome =
+                        !portfolio.homeSections || portfolio.homeSections.length === 0 ? true : portfolio.homeSections.includes(key)
                       return (
                         <div
                           key={key}
-                          className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 transition-colors ${
+                          className={`flex items-center gap-1 rounded-lg border px-2 py-1.5 transition-colors ${
                             active ? 'border-violet-400 bg-violet-50' : 'border-slate-200 bg-white hover:bg-slate-50'
                           }`}
                         >
-                          <button onClick={() => setOpenSection(key)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                          <span
+                            title={!visible ? 'Hidden from the site' : sectionFilled[key] ? 'Has content' : 'Empty — tap Edit to fill it'}
+                            className={`h-2 w-2 shrink-0 rounded-full ${
+                              !visible ? 'bg-slate-300' : sectionFilled[key] ? 'bg-emerald-500' : 'bg-amber-400'
+                            }`}
+                          />
+                          <button onClick={() => setOpenSection(key)} className="min-w-0 flex-1 text-left" title={`Edit ${SECTION_META[key].label}`}>
                             <span className={`truncate text-xs font-semibold ${visible ? 'text-slate-700' : 'text-slate-400 line-through'}`}>
                               {SECTION_META[key].label}
                             </span>
+                          </button>
+                          <button
+                            title={
+                              !visible
+                                ? 'Show the section first'
+                                : onHome
+                                  ? 'On the homepage — click to give it its own page (stays in the menu)'
+                                  : 'On its own page — click to put it back on the homepage'
+                            }
+                            disabled={!visible}
+                            onClick={() => toggleHome(key)}
+                            className={`shrink-0 rounded p-0.5 disabled:opacity-20 ${
+                              onHome && visible ? 'text-violet-600' : 'text-slate-300 hover:text-violet-500'
+                            }`}
+                          >
+                            <Home className={`h-3.5 w-3.5 ${onHome && visible ? 'fill-violet-100' : ''}`} />
                           </button>
                           <button
                             title={visible ? 'Hide section' : 'Show section'}
@@ -518,17 +608,64 @@ export function PortfolioBuilder() {
                           <button title="Move down" disabled={i === PORTFOLIO_SECTION_ORDER.length - 1} onClick={() => moveSection(key, 1)} className="shrink-0 rounded p-0.5 text-slate-300 hover:text-violet-600 disabled:opacity-30">
                             <ChevronDown className="h-3.5 w-3.5" />
                           </button>
+                          <button
+                            onClick={() => {
+                              setOpenSection(key)
+                              requestAnimationFrame(() => editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+                            }}
+                            className="ml-0.5 inline-flex shrink-0 items-center gap-0.5 rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-bold text-white transition-colors hover:bg-violet-700"
+                          >
+                            Edit <ChevronRight className="h-3 w-3" />
+                          </button>
                         </div>
                       )
                     })}
                   </div>
                 </div>
 
-                {/* Active section editor */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <h2 className="text-base font-bold text-slate-900">{SECTION_META[openSection].label}</h2>
-                  <p className="mb-4 text-xs text-slate-500">{SECTION_META[openSection].hint}</p>
-                  <ContentPanel section={openSection} />
+                {/* Active section editor — R9: "Section N of 8" header + a
+                    guided Prev/Next walk-through, so Next advances through
+                    SECTIONS first and only reaches Design after the last one */}
+                <div ref={editorRef} className="scroll-mt-28 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <h2 className="text-base font-bold text-slate-900">{SECTION_META[openSection].label}</h2>
+                    <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">
+                      Section {PORTFOLIO_SECTION_ORDER.indexOf(openSection) + 1} of {PORTFOLIO_SECTION_ORDER.length}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500">{SECTION_META[openSection].hint}</p>
+                  {!portfolio.sections[openSection] && (
+                    <p className="mt-2 flex items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] leading-relaxed text-amber-800">
+                      <EyeOff className="mt-0.5 h-3 w-3 shrink-0" /> This section is hidden from your website — tap the eye icon in the list above to show it.
+                    </p>
+                  )}
+                  <div className="mt-4">
+                    <ContentPanel section={openSection} />
+                  </div>
+                  <div className="mt-5 flex items-center justify-between gap-2 border-t border-slate-100 pt-4">
+                    <button
+                      onClick={() => gotoSection(PORTFOLIO_SECTION_ORDER.indexOf(openSection) - 1)}
+                      disabled={PORTFOLIO_SECTION_ORDER.indexOf(openSection) === 0}
+                      className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-30"
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" /> Prev
+                    </button>
+                    {PORTFOLIO_SECTION_ORDER.indexOf(openSection) < PORTFOLIO_SECTION_ORDER.length - 1 ? (
+                      <Button
+                        onClick={() => gotoSection(PORTFOLIO_SECTION_ORDER.indexOf(openSection) + 1)}
+                        className="h-8 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-xs text-white hover:from-violet-700 hover:to-indigo-700"
+                      >
+                        Next section <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => switchTab('design')}
+                        className="h-8 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-xs text-white hover:from-violet-700 hover:to-indigo-700"
+                      >
+                        All sections done — Next: Design <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -568,12 +705,24 @@ export function PortfolioBuilder() {
                 Step {tab === 'content' ? 1 : tab === 'design' ? 2 : 3} of 3
               </span>
               {tab !== 'publish' ? (
-                <Button
-                  onClick={() => switchTab(tab === 'content' ? 'design' : 'publish')}
-                  className="h-8 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-xs text-white hover:from-violet-700 hover:to-indigo-700"
-                >
-                  Next: {tab === 'content' ? 'Design' : 'Publish'} <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                </Button>
+                tab === 'content' ? (
+                  // R9 · the walk-through in the editor card owns the primary
+                  // "Next" — this stays a quiet jump for users who just want
+                  // to go and play with styles
+                  <button
+                    onClick={() => switchTab('design')}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-3.5 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+                  >
+                    Skip ahead: Design <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                ) : (
+                  <Button
+                    onClick={() => switchTab('publish')}
+                    className="h-8 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-xs text-white hover:from-violet-700 hover:to-indigo-700"
+                  >
+                    Next: Publish <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                  </Button>
+                )
               ) : (
                 <span className="text-[11px] font-semibold text-emerald-600">Final step — publish below 🎉</span>
               )}

@@ -1,0 +1,63 @@
+# SEEMEHERE — R9 update: "A real website, not a page"
+# Site menu bar + mobile hamburger · choose-your-homepage sections (own pages) ·
+# per-template gallery grids + lightbox · Content-tab walk-through.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# WHAT'S NEW (portfolio builder + published portfolio sites)
+#
+# 1. SITE MENU BAR + MOBILE HAMBURGER (all 15 templates)
+#    • Every published portfolio now has a sticky top bar: your name (+ photo)
+#      on the left, Home · About · Projects · … · Contact on the right, plus a
+#      CV download pill. Active section highlights as visitors scroll.
+#    • On phones the bar collapses to a hamburger (☰) that opens a slide-in
+#      drawer with the full numbered section list and a Download-my-CV button.
+#    • The nav inherits each template's personality: Terminal gets a mono
+#      "> Home" prompt, Riot a neobrutalist bar, Noir letterspaced gold
+#      small-caps, Monolith heavy caps, Editorial serif — never bolted-on.
+#
+# 2. CHOOSE WHAT'S ON THE HOMEPAGE — sections get their own pages
+#    • Content tab → Website sections: every row now has a ⌂ toggle (next to
+#      👁 show/hide and ↑↓ order). ⌂ ON  = lives on the homepage.
+#      ⌂ OFF = gets its OWN page (e.g. yoursite/cv/ada#/gallery), still listed
+#      in the menu. All visible sections always appear in the menu regardless.
+#    • Home = hero + your ⌂-picked sections. Existing sites/drafts: nothing
+#      moves until you touch a ⌂ toggle (no ⌂ data = everything on home).
+#
+# 3. GALLERY — always a designed grid, per template (no settings needed)
+#    • masonry  → Lagoon, Bloom (natural-height columns)
+#    • feature  → Vogue, Editorial, Noir, Spotlight (oversized first image)
+#    • bento    → Bento, Riot, Terminal (mixed-span tiles, overlay captions)
+#    • uniform  → Aura, Atelier, Monolith, Meridian, Signature, Horizon
+#    • Every image opens in a lightbox (tap, arrows or Esc to browse/close).
+#
+# 4. CONTENT TAB — now walks you through the sections
+#    • Each row: status dot (green filled / amber empty / gray hidden),
+#      a violet "Edit ›" button, ⌂ · 👁 · ↑↓, and a "N of 8 filled" chip.
+#    • While editing: "Section N of 8" header with ‹ Prev / Next section ›.
+#      The primary button walks ALL sections first — only after the last one
+#      does it become "All sections done — Next: Design". (The old bar keeps a
+#      quiet "Skip ahead: Design" for people who want to jump.)
+#
+# Landing page copy updated. CV builder untouched.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# HOW TO APPLY (same as R7/R8 — this zip is the FULL project)
+#
+# 1) Unzip INTO YOUR PROJECT ROOT (the folder that has package.json).
+#    Let it REPLACE/merge src/, prisma/, public/ and the root config files.
+#    This zip is the complete project — it is safe to extract over your tree.
+#    Your .env and db/ are NOT included (protected on purpose).
+# 2) NO database changes this round. Nothing to run for Prisma beyond:
+#        npm install
+#        npx prisma generate
+#    (Already done those since R8? Then just these files replace cleanly.)
+# 3) Test locally:  npm run dev   → http://localhost:3000/portfolio
+# 4) Push to GitHub → Render auto-deploys. Zero manual steps in production
+#    (ensure-schema handles everything; no new columns this release).
+#
+# NOTES
+# • Old published pages keep rendering exactly as before — they only GAIN the
+#   menu bar. Sections only move off the homepage when a user toggles ⌂.
+# • The builder's phone preview now shows the real hamburger menu (it was a
+#   real bug that desktop links showed in the simulated phone — fixed).
+# • Previous versions of this file (APPLY-R8.txt) can be deleted.
